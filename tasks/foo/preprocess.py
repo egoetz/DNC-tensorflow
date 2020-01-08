@@ -76,9 +76,9 @@ def encode_data(files_list, lexicons_dictionary):
                     story_outputs.append(lexicons_dictionary[word])
                 else:
                     story_inputs.append(lexicons_dictionary[word])
-                if word == '-':
-                    onAnswer = True
-            story_inputs.extend(lexicons_dictionary['-'] for word in list(range(len(story_outputs) - 1)))
+                    if word == '#':
+                        onAnswer = True
+            story_inputs.extend(lexicons_dictionary['#'] for word in list(range(len(story_outputs))))
             files[filename].append({
                 'inputs': story_inputs,
                 'outputs': story_outputs
@@ -90,12 +90,12 @@ def encode_data(files_list, lexicons_dictionary):
     return files
 
 
-def generate_data(directory):
+def generate_data(directory, total_examples):
     word_file = "/usr/share/dict/words"
     WORDS = map(str.lower, open(word_file).read().splitlines())
-    for i in range(0, 100):
+    for i in range(0, total_examples):
         my_inputs = list(WORDS[i])
-        if i < 90:
+        if i < np.floor(total_examples * 9 / 10):
             path = join(directory, "%dtrain.txt" %i)
         else:
             path = join(directory, "%dtest.txt" %i)
@@ -103,7 +103,7 @@ def generate_data(directory):
             my_outputs = [letter for letter in my_inputs if letter in ['a', 'e', 'i', 'o', 'u']]
             for letter in my_inputs:
                 file.write("%c\n" % letter)
-            file.write("-\n")
+            file.write("#\n")
             for letter in my_outputs:
                 file.write("%c\n" % letter)
 
@@ -113,12 +113,13 @@ if __name__ == '__main__':
     options,_ = getopt.getopt(sys.argv[1:], '', ['data_dir=', 'single_train'])
     joint_train = True
     files_list = []
+    total_examples = 10000
 
     if not exists(join(task_dir, 'data')):
         mkdir(join(task_dir, 'data'))
     if not exists(join(task_dir, 'data', 'unencoded')):
         mkdir(join(task_dir, 'data', 'unencoded'))
-    generate_data(join(task_dir, 'data', 'unencoded'))
+    generate_data(join(task_dir, 'data', 'unencoded'), total_examples)
     data_dir = join(task_dir, 'data', 'unencoded')
 
     for opt in options:

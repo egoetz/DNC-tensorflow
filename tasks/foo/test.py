@@ -32,7 +32,9 @@ def prepare_sample(sample, target_code, word_space_size):
     weights_vec = np.zeros(seq_len, dtype=np.float32)
 
     target_mask = (input_vec == target_code)
-    output_vec[target_mask] = sample[0]['outputs']
+    if len(sample[0]['outputs']) != 0:
+        output_vec = np.append(output_vec[:np.where(target_mask == True)[0][0] + 1], sample[0]['outputs'])
+
     weights_vec[target_mask] = 1.0
 
     input_vec = np.array([onehot(int(code), word_space_size) for code in input_vec])
@@ -48,7 +50,7 @@ def prepare_sample(sample, target_code, word_space_size):
 
 ckpts_dir = './checkpoints/'
 lexicon_dictionary = load('./data/encoded/lexicon-dict.pkl')
-target_code = lexicon_dictionary["-"]
+target_code = lexicon_dictionary["#"]
 test_files = []
 
 for entry_name in os.listdir('./data/encoded/test/'):
@@ -70,7 +72,7 @@ with graph.as_default():
             memory_read_heads=4,
         )
 
-        ncomputer.restore(session, ckpts_dir, 'step-14976')
+        ncomputer.restore(session, ckpts_dir, 'step-100001')
 
         outputs, _ = ncomputer.get_outputs()
         softmaxed = tf.nn.softmax(outputs)
@@ -80,7 +82,7 @@ with graph.as_default():
         counter = 0
         for test_file in test_files:
             test_data = load(test_file)
-            task_regexp = r'([0-9]{1,3})test.txt.pkl'
+            task_regexp = r'([0-9]{1,4})test.txt.pkl'
             task_filename = os.path.basename(test_file)
             task_match_obj = re.match(task_regexp, task_filename)
             task_number = task_match_obj.group(1)
@@ -89,9 +91,9 @@ with graph.as_default():
 
             for story in test_data:
                 a_story = np.array(story['inputs'])
-                questions_indices = np.argwhere(a_story == target_code)
-                questions_indices = np.reshape(questions_indices, (-1,))
-                target_mask = (a_story == target_code)
+                target_mask_1 = (a_story == target_code)
+                target_mask = target_mask_1.copy()
+                target_mask[np.where(target_mask_1 == True)[0][0]] = False
 
                 desired_answers = np.array(story['outputs'])
                 input_vec, _, seq_len, _ = prepare_sample([story], target_code, len(lexicon_dictionary))
@@ -103,15 +105,19 @@ with graph.as_default():
                 softmax_output = np.squeeze(softmax_output, axis=0)
                 given_answers = np.argmax(softmax_output[target_mask], axis=1)
 
-                answers_cursor = 0
-                for question_index in questions_indices:
-                    question_grade = []
-                    targets_cursor = question_index + 1
-                    while targets_cursor < len(a_story) and a_story[targets_cursor] == target_code:
-                        question_grade.append(given_answers[answers_cursor] == desired_answers[answers_cursor])
-                        answers_cursor += 1
-                        targets_cursor += 1
-                    results.append(np.prod(question_grade))
+                isCorrect = True
+                if len(given_answers) != len(desired_answers):
+                    isCorrect = False
+                else:
+                    for i in range(len(given_answers)):
+                        if given_answers[i] != desired_answers[i]:
+                            isCorrect = False
+                if not isCorrect:
+                    print "\nGiven: ", given_answers
+                    print "Expected: ", desired_answers
+                    results.append(False)
+                else:
+                    results.append(True)
 
             counter += 1
             llprint("\rTests Completed ... %d/%d" % (counter, len(test_files)))
@@ -119,15 +125,10 @@ with graph.as_default():
             error_rate = 1. - np.mean(results)
             tasks_results[task_number] = error_rate
         print "\n"
-        print "%-27s%-27s" % ("Task", "Result")
-        print "-------------------------------------------------------------------"
-        for task_number in sorted(tasks_numbers):
-            task_result = "%.2f%%" % (tasks_results[task_number] * 100)
-            print "%-27s%-27s" % (task_number, task_result)
         print "-------------------------------------------------------------------"
         all_tasks_results = [v for _, v in tasks_results.iteritems()]
         results_mean = "%.2f%%" % (np.mean(all_tasks_results) * 100)
         failed_count = "%d" % (np.sum(np.array(all_tasks_results) > 0.05))
 
-        print "%-27s%-27s" % ("Mean Err.", results_mean)
-        print "%-27s%-27s" % ("Failed (err. > 5%)", failed_count)
+        print "%-27s%-27s" % ("Percent Failed", results_mean)
+        print "%-27s%-27s" % ("Total Failed", failed_count)

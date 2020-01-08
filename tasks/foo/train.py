@@ -34,9 +34,10 @@ def prepare_sample(sample, target_code, dict_size):
     output_vec = np.array(sample[0]['inputs'], dtype=np.float32)
     seq_len = input_vec.shape[0]
     weights_vec = np.zeros(seq_len, dtype=np.float32)
-
     target_mask = (input_vec == target_code)
-    output_vec[target_mask] = sample[0]['outputs']
+    if len(sample[0]['outputs']) != 0:
+        output_vec = np.append(output_vec[:np.where(target_mask == True)[0][0] + 1], sample[0]['outputs'])
+
     weights_vec[target_mask] = 1.0
 
     input_vec = np.array([onehot(int(code), dict_size) for code in input_vec])
@@ -73,7 +74,7 @@ if __name__ == '__main__':
     learning_rate = 1e-4
     momentum = 0.9
 
-    from_checkpoint = None
+    from_checkpoint = 'step-44572'
     iterations = 100000
     start_step = 0
 
@@ -110,6 +111,7 @@ if __name__ == '__main__':
             output, _ = ncomputer.get_outputs()
 
             loss_weights = tf.placeholder(tf.float32, [batch_size, None, 1])
+
             loss = tf.reduce_mean(
                 loss_weights * tf.nn.softmax_cross_entropy_with_logits(output, ncomputer.target_output)
             )
@@ -157,9 +159,7 @@ if __name__ == '__main__':
                     llprint("\rIteration %d/%d" % (i, end))
 
                     sample = np.random.choice(data, 1)
-
-
-                    input_data, target_output, seq_len, weights = prepare_sample(sample, lexicon_dict['-'],
+                    input_data, target_output, seq_len, weights = prepare_sample(sample, lexicon_dict['#'],
                                                                                  dict_size)
 
                     summarize = (i % 100 == 0)
