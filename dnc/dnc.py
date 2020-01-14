@@ -4,10 +4,11 @@ from memory import Memory
 import utility
 import os
 
+
 class DNC:
 
     def __init__(self, controller_class, input_size, output_size, max_sequence_length,
-                 memory_words_num = 256, memory_word_size = 64, memory_read_heads = 4, batch_size = 1):
+                 memory_words_num=256, memory_word_size=64, memory_read_heads=4, batch_size=1):
         """
         constructs a complete DNC architecture as described in the DNC paper
         http://www.nature.com/nature/journal/vaop/ncurrent/full/nature20101.html
@@ -41,15 +42,15 @@ class DNC:
         self.batch_size = batch_size
 
         self.memory = Memory(self.words_num, self.word_size, self.read_heads, self.batch_size)
-        self.controller = controller_class(self.input_size, self.output_size, self.read_heads, self.word_size, self.batch_size)
+        self.controller = controller_class(self.input_size, self.output_size, self.read_heads, self.word_size,
+                                           self.batch_size)
 
         # input data placeholders
-        self.input_data = tf.placeholder(tf.float32, [batch_size, None, input_size], name='input')
-        self.target_output = tf.placeholder(tf.float32, [batch_size, None, output_size], name='targets')
-        self.sequence_length = tf.placeholder(tf.int32, name='sequence_length')
+        self.input_data = tf.compat.v1.placeholder(tf.float32, [batch_size, None, input_size], name='input')
+        self.target_output = tf.compat.v1.placeholder(tf.float32, [batch_size, None, output_size], name='targets')
+        self.sequence_length = tf.compat.v1.placeholder(tf.int32, name='sequence_length')
 
         self.build_graph()
-
 
     def _step_op(self, step, memory_state, controller_state=None):
         """
@@ -118,7 +119,6 @@ class DNC:
             nn_state[1] if nn_state is not None else tf.zeros(1)
         ]
 
-
     def _loop_body(self, time, memory_state, outputs, free_gates, allocation_gates, write_gates,
                    read_weightings, write_weightings, usage_vectors, controller_state):
         """
@@ -140,7 +140,7 @@ class DNC:
         Returns: Tuple containing all updated arguments
         """
 
-        step_input = self.unpacked_input_data.read(time)
+        step_input = self.unstacked_input_data.read(time)
 
         output_list = self._step_op(step_input, memory_state, controller_state)
 
@@ -163,11 +163,10 @@ class DNC:
 
         return (
             time + 1, new_memory_state, outputs,
-            free_gates,allocation_gates, write_gates,
+            free_gates, allocation_gates, write_gates,
             read_weightings, write_weightings,
             usage_vectors, new_controller_state
         )
-
 
     def build_graph(self):
         """
@@ -175,7 +174,7 @@ class DNC:
         of the input data batches
         """
 
-        self.unpacked_input_data = utility.unpack_into_tensorarray(self.input_data, 1, self.sequence_length)
+        self.unstacked_input_data = utility.unstack_into_tensorarray(self.input_data, 1, self.sequence_length)
 
         outputs = tf.TensorArray(tf.float32, self.sequence_length)
         free_gates = tf.TensorArray(tf.float32, self.sequence_length)
@@ -185,13 +184,14 @@ class DNC:
         write_weightings = tf.TensorArray(tf.float32, self.sequence_length)
         usage_vectors = tf.TensorArray(tf.float32, self.sequence_length)
 
-        controller_state = self.controller.get_state() if self.controller.has_recurrent_nn else (tf.zeros(1), tf.zeros(1))
+        controller_state = self.controller.get_state() if self.controller.has_recurrent_nn else (tf.zeros(1),
+                                                                                                 tf.zeros(1))
         memory_state = self.memory.init_memory()
         if not isinstance(controller_state, LSTMStateTuple):
             controller_state = LSTMStateTuple(controller_state[0], controller_state[1])
         final_results = None
 
-        with tf.variable_scope("sequence_loop") as scope:
+        with tf.compat.v1.variable_scope("sequence_loop") as scope:
             time = tf.constant(0, dtype=tf.int32)
 
             final_results = tf.while_loop(
@@ -212,16 +212,15 @@ class DNC:
             dependencies.append(self.controller.update_state(final_results[9]))
 
         with tf.control_dependencies(dependencies):
-            self.packed_output = utility.pack_into_tensor(final_results[2], axis=1)
-            self.packed_memory_view = {
-                'free_gates': utility.pack_into_tensor(final_results[3], axis=1),
-                'allocation_gates': utility.pack_into_tensor(final_results[4], axis=1),
-                'write_gates': utility.pack_into_tensor(final_results[5], axis=1),
-                'read_weightings': utility.pack_into_tensor(final_results[6], axis=1),
-                'write_weightings': utility.pack_into_tensor(final_results[7], axis=1),
-                'usage_vectors': utility.pack_into_tensor(final_results[8], axis=1)
+            self.stacked_output = utility.stack_into_tensor(final_results[2], axis=1)
+            self.stacked_memory_view = {
+                'free_gates': utility.stack_into_tensor(final_results[3], axis=1),
+                'allocation_gates': utility.stack_into_tensor(final_results[4], axis=1),
+                'write_gates': utility.stack_into_tensor(final_results[5], axis=1),
+                'read_weightings': utility.stack_into_tensor(final_results[6], axis=1),
+                'write_weightings': utility.stack_into_tensor(final_results[7], axis=1),
+                'usage_vectors': utility.stack_into_tensor(final_results[8], axis=1)
             }
-
 
     def get_outputs(self):
         """
@@ -231,10 +230,10 @@ class DNC:
             outputs: Tensor (batch_size, time_steps, output_size)
             memory_view: dict
         """
-        return self.packed_output, self.packed_memory_view
+        return self.stacked_output, self.stacked_memory_view
 
-
-    def save(self, session, ckpts_dir, name):
+    @staticmethod
+    def save(session, ckpts_dir, name):
         """
         saves the current values of the model's parameters to a checkpoint
 
@@ -252,10 +251,10 @@ class DNC:
         if not os.path.exists(checkpoint_dir):
             os.makedirs(checkpoint_dir)
 
-        tf.train.Saver(tf.trainable_variables()).save(session, os.path.join(checkpoint_dir, 'model.ckpt'))
+        tf.compat.v1.train.Saver(tf.compat.v1.trainable_variables()).save(session, os.path.join(checkpoint_dir, 'model.ckpt'))
 
-
-    def restore(self, session, ckpts_dir, name):
+    @staticmethod
+    def restore(session, ckpts_dir, name):
         """
         session: tf.Session
             the tensorflow session to restore into
@@ -264,4 +263,4 @@ class DNC:
         name: string
             the name of the checkpoint subdirectory
         """
-        tf.train.Saver(tf.trainable_variables()).restore(session, os.path.join(ckpts_dir, name, 'model.ckpt'))
+        tf.compat.v1.train.Saver(tf.compat.v1.trainable_variables()).restore(session, os.path.join(ckpts_dir, name, 'model.ckpt'))

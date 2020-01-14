@@ -29,22 +29,23 @@ def onehot(index, size):
     return vec
 
 
-def prepare_sample(sample, target_code, word_space_size):
+def prepare_sample(sample, target_code, dict_size):
     input_vec = np.array(sample[0]['inputs'], dtype=np.float32)
     output_vec = np.array(sample[0]['inputs'], dtype=np.float32)
     seq_len = input_vec.shape[0]
     weights_vec = np.zeros(seq_len, dtype=np.float32)
-
     target_mask = (input_vec == target_code)
-    output_vec[target_mask] = sample[0]['outputs']
+    if len(sample[0]['outputs']) != 0:
+        output_vec = np.append(output_vec[:np.where(target_mask == True)[0][0] + 1], sample[0]['outputs'])
+
     weights_vec[target_mask] = 1.0
 
-    input_vec = np.array([onehot(int(code), word_space_size) for code in input_vec])
-    output_vec = np.array([onehot(int(code), word_space_size) for code in output_vec])
+    input_vec = np.array([onehot(int(code), dict_size) for code in input_vec])
+    output_vec = np.array([onehot(int(code), dict_size) for code in output_vec])
 
     return (
-        np.reshape(input_vec, (1, -1, word_space_size)),
-        np.reshape(output_vec, (1, -1, word_space_size)),
+        np.reshape(input_vec, (1, -1, dict_size)),
+        np.reshape(output_vec, (1, -1, dict_size)),
         seq_len,
         np.reshape(weights_vec, (1, -1, 1))
     )
@@ -54,7 +55,7 @@ if __name__ == '__main__':
 
     dirname = os.path.dirname(__file__)
     ckpts_dir = os.path.join(dirname, 'checkpoints')
-    data_dir = os.path.join(dirname, 'data', 'en-10k')
+    data_dir = os.path.join(dirname, 'data', 'encoded')
     tb_logs_dir = os.path.join(dirname, 'logs')
 
     llprint("Loading Data ... ")
@@ -65,7 +66,7 @@ if __name__ == '__main__':
     batch_size = 1
     input_size = output_size = len(lexicon_dict)
     sequence_max_length = 100
-    word_space_size = len(lexicon_dict)
+    dict_size = len(lexicon_dict)
     words_count = 256
     word_size = 64
     read_heads = 4
@@ -75,7 +76,6 @@ if __name__ == '__main__':
 
     from_checkpoint = None
     iterations = 100000
-
     start_step = 0
 
     options, _ = getopt.getopt(sys.argv[1:], '', ['checkpoint=', 'iterations=', 'start='])
@@ -111,6 +111,7 @@ if __name__ == '__main__':
             output, _ = ncomputer.get_outputs()
 
             loss_weights = tf.compat.v1.placeholder(tf.float32, [batch_size, None, 1])
+
             loss = tf.reduce_mean(
                 loss_weights * tf.nn.softmax_cross_entropy_with_logits(logits=output, labels=ncomputer.target_output)
             )
@@ -128,7 +129,6 @@ if __name__ == '__main__':
             apply_gradients = optimizer.apply_gradients(gradients)
 
             summaries.append(tf.compat.v1.summary.scalar("Loss", loss))
-
             summarize_op = tf.compat.v1.summary.merge(summaries)
             no_summarize = tf.no_op()
 
@@ -158,8 +158,8 @@ if __name__ == '__main__':
                     llprint("\rIteration %d/%d" % (i, end))
 
                     sample = np.random.choice(data, 1)
-                    input_data, target_output, seq_len, weights = prepare_sample(sample, lexicon_dict['-'],
-                                                                                 word_space_size)
+                    input_data, target_output, seq_len, weights = prepare_sample(sample, lexicon_dict['#'],
+                                                                                 dict_size)
 
                     summarize = (i % 100 == 0)
                     take_checkpoint = (i != 0) and (i % end == 0)

@@ -1,4 +1,5 @@
 import warnings
+
 warnings.filterwarnings('ignore')
 
 import tensorflow as tf
@@ -10,12 +11,13 @@ import os
 from dnc.dnc import DNC
 from feedforward_controller import FeedforwardController
 
+
 def llprint(message):
     sys.stdout.write(message)
     sys.stdout.flush()
 
-def generate_data(batch_size, length, size):
 
+def generate_data(batch_size, length, size):
     input_data = np.zeros((batch_size, 2 * length + 1, size), dtype=np.float32)
     target_output = np.zeros((batch_size, 2 * length + 1, size), dtype=np.float32)
 
@@ -29,16 +31,15 @@ def generate_data(batch_size, length, size):
 
 
 def binary_cross_entropy(predictions, targets):
-
     return tf.reduce_mean(
-        -1 * targets * tf.log(predictions) - (1 - targets) * tf.log(1 - predictions)
+        input_tensor=-1 * targets * tf.math.log(predictions) - (1 - targets) * tf.math.log(1 - predictions)
     )
 
 
 if __name__ == '__main__':
 
     dirname = os.path.dirname(__file__)
-    ckpts_dir = os.path.join(dirname , 'checkpoints')
+    ckpts_dir = os.path.join(dirname, 'checkpoints')
     tb_logs_dir = os.path.join(dirname, 'logs')
 
     batch_size = 1
@@ -54,7 +55,7 @@ if __name__ == '__main__':
     from_checkpoint = None
     iterations = 100000
 
-    options,_ = getopt.getopt(sys.argv[1:], '', ['checkpoint=', 'iterations='])
+    options, _ = getopt.getopt(sys.argv[1:], '', ['checkpoint=', 'iterations='])
 
     for opt in options:
         if opt[0] == '--checkpoint':
@@ -65,11 +66,11 @@ if __name__ == '__main__':
     graph = tf.Graph()
 
     with graph.as_default():
-        with tf.Session(graph=graph) as session:
+        with tf.compat.v1.Session(graph=graph) as session:
 
             llprint("Building Computational Graph ... ")
 
-            optimizer = tf.train.RMSPropOptimizer(learning_rate, momentum=momentum)
+            optimizer = tf.compat.v1.train.RMSPropOptimizer(learning_rate, momentum=momentum)
 
             ncomputer = DNC(
                 FeedforwardController,
@@ -88,64 +89,63 @@ if __name__ == '__main__':
 
             loss = binary_cross_entropy(squashed_output, ncomputer.target_output)
 
-            summeries = []
+            summaries = []
 
             gradients = optimizer.compute_gradients(loss)
             for i, (grad, var) in enumerate(gradients):
                 if grad is not None:
-                    summeries.append(tf.histogram_summary(var.name + '/grad', grad))
+                    summaries.append(tf.compat.v1.summary.histogram(var.name + '/grad', grad))
                     gradients[i] = (tf.clip_by_value(grad, -10, 10), var)
 
             apply_gradients = optimizer.apply_gradients(gradients)
 
-            summeries.append(tf.scalar_summary("Loss", loss))
+            summaries.append(tf.compat.v1.summary.scalar("Loss", loss))
+            print("Summaries ", summaries)
+            summarize_op = tf.compat.v1.summary.merge(summaries)
+            no_summarize = tf.no_op()
 
-            summerize_op = tf.merge_summary(summeries)
-            no_summerize = tf.no_op()
-
-            summerizer = tf.train.SummaryWriter(tb_logs_dir, session.graph)
+            summarizer = tf.compat.v1.summary.FileWriter(tb_logs_dir, session.graph)
 
             llprint("Done!\n")
 
             llprint("Initializing Variables ... ")
-            session.run(tf.initialize_all_variables())
+            session.run(tf.compat.v1.global_variables_initializer())
             llprint("Done!\n")
 
             if from_checkpoint is not None:
-                llprint("Restoring Checkpoint %s ... " % (from_checkpoint))
+                llprint("Restoring Checkpoint %s ... " % from_checkpoint)
                 ncomputer.restore(session, ckpts_dir, from_checkpoint)
                 llprint("Done!\n")
 
-
             last_100_losses = []
 
-            for i in xrange(iterations + 1):
+            for i in range(iterations + 1):
                 llprint("\rIteration %d/%d" % (i, iterations))
 
                 random_length = np.random.randint(1, sequence_max_length + 1)
                 input_data, target_output = generate_data(batch_size, random_length, input_size)
 
-                summerize = (i % 100 == 0)
+                summarize = (i % 100 == 0)
                 take_checkpoint = (i != 0) and (i % iterations == 0)
 
                 loss_value, _, summary = session.run([
                     loss,
                     apply_gradients,
-                    summerize_op if summerize else no_summerize
+                    summarize_op if summarize else no_summarize
                 ], feed_dict={
                     ncomputer.input_data: input_data,
                     ncomputer.target_output: target_output,
                     ncomputer.sequence_length: 2 * random_length + 1
                 })
-
                 last_100_losses.append(loss_value)
-                summerizer.add_summary(summary, i)
+                if summarize:
+                    summarizer.add_summary(summary, i)
 
-                if summerize:
+                if summarize:
                     llprint("\n\tAvg. Logistic Loss: %.4f\n" % (np.mean(last_100_losses)))
                     last_100_losses = []
 
                 if take_checkpoint:
                     llprint("\nSaving Checkpoint ... "),
-                    ncomputer.save(session, ckpts_dir, 'step-%d' % (i))
+                    ncomputer.save(session, ckpts_dir, 'step-%d' % i)
                     llprint("Done!\n")

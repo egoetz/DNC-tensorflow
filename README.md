@@ -8,12 +8,8 @@ This implementation doesn't include all the tasks that was described in the pape
 ## Local Environment Specification
 
 Copy experiments and tests ran on a machine with:
-- An Intel Core i5 2410M CPU @ 2.30GHz (2 physical cores, with hyper-threading enabled)
-- 4GB SO-DIMM DDR3 RAM @ 1333MHz
-- No GPU.
-- Ubuntu 14.04 LTS
-- TensorFlow r0.11
-- Python 2.7
+- TensorFlow 2.1
+- Python 3.6
 
 bAbI experiment and tests ran on an AWS P2 instance on 1 Tesla K80 GPU.
 

@@ -2,6 +2,7 @@ import tensorflow as tf
 import numpy as np
 from tensorflow.python.ops import gen_state_ops
 
+
 def pairwise_add(u, v=None, is_batch=False):
     """
     performs a pairwise summation between vectors (possibly the same)
@@ -34,13 +35,13 @@ def pairwise_add(u, v=None, is_batch=False):
     n = u_shape[0] if not is_batch else u_shape[1]
 
     column_u = tf.reshape(u, (-1, 1) if not is_batch else (-1, n, 1))
-    U = tf.concat(1 if not is_batch else 2, [column_u] * n)
+    U = tf.concat(axis=1 if not is_batch else 2, values=[column_u] * n)
 
     if v is u:
-        return U + tf.transpose(U, None if not is_batch else [0, 2, 1])
+        return U + tf.transpose(a=U, perm=None if not is_batch else [0, 2, 1])
     else:
         row_v = tf.reshape(v, (1, -1) if not is_batch else (-1, 1, n))
-        V = tf.concat(0 if not is_batch else 1, [row_v] * n)
+        V = tf.concat(axis=0 if not is_batch else 1, values=[row_v] * n)
 
         return U + V
 
@@ -59,21 +60,22 @@ def decaying_softmax(shape, axis):
 
     return container + np.reshape(weights_vector, broadcastable_shape)
 
-def unpack_into_tensorarray(value, axis, size=None):
+
+def unstack_into_tensorarray(value, axis, size=None):
     """
-    unpacks a given tensor along a given axis into a TensorArray
+    unstacks a given tensor along a given axis into a TensorArray
 
     Parameters:
     ----------
     value: Tensor
-        the tensor to be unpacked
+        the tensor to be unstacked
     axis: int
-        the axis to unpack the tensor along
+        the axis to unstack the tensor along
     size: int
         the size of the array to be used if shape inference resulted in None
 
     Returns: TensorArray
-        the unpacked TensorArray
+        the unstacked TensorArray
     """
 
     shape = value.get_shape().as_list()
@@ -85,32 +87,33 @@ def unpack_into_tensorarray(value, axis, size=None):
         raise ValueError("Can't create TensorArray with size None")
 
     array = tf.TensorArray(dtype=dtype, size=array_size)
-    dim_permutation = [axis] + range(1, axis) + [0] + range(axis + 1, rank)
-    unpack_axis_major_value = tf.transpose(value, dim_permutation)
-    full_array = array.unpack(unpack_axis_major_value)
+    dim_permutation = [axis] + list(range(1, axis)) + [0] + list(range(axis + 1, rank))
+    unstack_axis_major_value = tf.transpose(a=value, perm=dim_permutation)
+    full_array = array.unstack(unstack_axis_major_value)
 
     return full_array
 
-def pack_into_tensor(array, axis):
+
+def stack_into_tensor(array, axis):
     """
-    packs a given TensorArray into a tensor along a given axis
+    stacks a given TensorArray into a tensor along a given axis
 
     Parameters:
     ----------
     array: TensorArray
-        the tensor array to pack
+        the tensor array to stack
     axis: int
-        the axis to pack the array along
+        the axis to stack the array along
 
     Returns: Tensor
-        the packed tensor
+        the stacked tensor
     """
 
-    packed_tensor = array.pack()
-    shape = packed_tensor.get_shape()
+    stacked_tensor = array.stack()
+    shape = stacked_tensor.get_shape()
     rank = len(shape)
 
-    dim_permutation = [axis] + range(1, axis) + [0]  + range(axis + 1, rank)
-    correct_shape_tensor = tf.transpose(packed_tensor, dim_permutation)
+    dim_permutation = [axis] + list(range(1, axis)) + [0] + list(range(axis + 1, rank))
+    correct_shape_tensor = tf.transpose(a=stacked_tensor, perm=dim_permutation)
 
     return correct_shape_tensor
