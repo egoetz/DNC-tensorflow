@@ -47,6 +47,7 @@ def create_dictionary(files_list):
         llprint("\rCreating Dictionary ... %d/%d" % ((index + 1), len(files_list)))
 
     print("\rCreating Dictionary ... Done!")
+    print(len(lexicons_dict))
     return lexicons_dict
 
 

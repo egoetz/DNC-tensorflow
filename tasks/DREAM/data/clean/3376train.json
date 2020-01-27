@@ -1,0 +1,1 @@
+[["m :  i thought that the chair cost 50 dollars . ", "w :  it used to  but the price has gone up 15 dollars . ", "m :  well  that ' s more than i can afford  i ' m afraid . "], [{"question": "what ' s the price of the chair ? ", "choice": [" $ 15 . ", " $ 50 . ", " $ 65 . "], "answer": " $ 65 . "}], "4 - 725"]

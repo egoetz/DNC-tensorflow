@@ -1,0 +1,1 @@
+[["m :  would you like to go to the movies tonight at 11 o ' clock ? ", "w :  you must be joking .  my train leaves at 6 : 10 tomorrow morning . "], [{"question": "what time will the train leave ? ", "choice": ["at 6 : 10 tomorrow morning . ", "at 11 : 00 tonight . ", "at 11 : 00 tomorrow morning . "], "answer": "at 6 : 10 tomorrow morning . "}], "4 - 145"]

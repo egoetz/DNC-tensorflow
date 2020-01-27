@@ -1,0 +1,1 @@
+[["m :  i am traveling to new york on flight 792 .  do i check in here ? ", "w :  that ' s right  sir .  can i see your ticket and your passport  please ? "], [{"question": "how is the man traveling to new york ? ", "choice": ["by car . ", "by ship . ", "by plane . "], "answer": "by plane . "}], "21 - 285"]

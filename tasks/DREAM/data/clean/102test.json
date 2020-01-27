@@ -1,0 +1,1 @@
+[["m :  can i help you ? ", "w :  yes  i ' d like a pound of oranges  please . ", "m :  do you want the ones at 20 pence  25 pence or 30 pence ? ", "w :  the ones at 30 pence  please . "], [{"question": "what is the price of a pound of oranges that the woman would like ? ", "choice": ["20 pence . ", "25 pence . ", "30 pence . "], "answer": "30 pence . "}], "14 - 287"]

@@ -1,0 +1,1 @@
+[["w :  how can i get to the airport ? ", "m :  you can go there by underground  by bus or by taxi .  the underground is the quickest .  but the bus is the cheapest . "], [{"question": "which is the quickest way to the airport ? ", "choice": ["by taxi . ", "by bus . ", "by underground . "], "answer": "by underground . "}], "4 - 703"]

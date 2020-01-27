@@ -1,0 +1,1 @@
+[["w :  both sally and windy live on the 16 th floor .  am i right ? ", "m :  no .  sally lives on the 15 th floor  while windy and i live on the 16 th floor . "], [{"question": "where does sally live ? ", "choice": ["on the 16 th floor . ", "on the 15 th floor . ", "on the same floor with the man . "], "answer": "on the 15 th floor . "}], "14 - 182"]

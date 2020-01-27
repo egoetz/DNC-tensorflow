@@ -1,0 +1,1 @@
+[["w :  excuse me .  do you have the time ? ", "m :  yes .  it ' s 8 :  45  but my watch is a little bit fast . "], [{"question": "what time is it ? ", "choice": ["it is a little after 8 :  45 . ", "it is 5 minutes faster . ", "it is a little before 8 :  45 . "], "answer": "it is a little before 8 :  45 . "}], "15 - 121"]
