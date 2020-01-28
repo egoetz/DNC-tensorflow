@@ -1,1 +1,1 @@
-[["m :  hello !  is that 876 - 2917 ? ", "f :  no  it ' s 872 - 6917 . "], [{"question": "what ' s the right number ? ", "choice": ["876 - 2197 . ", "872 - 6917 . ", "876 - 2917 . "], "answer": "872 - 6917 . "}], "11 - 1"]
+[["m :  hello !  is that 8 7 6 - 2 9 1 7 ? ", "f :  no  it ' s 8 7 2 - 6 9 1 7 . "], [{"question": "what ' s the right number ? ", "choice": ["8 7 6 - 2 1 9 7 . ", "8 7 2 - 6 9 1 7 . ", "8 7 6 - 2 9 1 7 . "], "answer": "8 7 2 - 6 9 1 7 . "}], "1 1 - 1"]

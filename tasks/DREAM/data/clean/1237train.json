@@ -1,1 +1,1 @@
-[["w :  hello . ", "m :  hello .  this is fred  mary ' s classmate .  may i speak to her  please ? "], [{"question": "who is telephoning mary ? ", "choice": ["mary ' s friend . ", "mary ' s classmate . ", "mary ' s teacher . "], "answer": "mary ' s classmate . "}], "12 - 247"]
+[["w :  hello . ", "m :  hello .  this is fred  mary ' s classmate .  may i speak to her  please ? "], [{"question": "who is telephoning mary ? ", "choice": ["mary ' s friend . ", "mary ' s classmate . ", "mary ' s teacher . "], "answer": "mary ' s classmate . "}], "1 2 - 2 4 7"]

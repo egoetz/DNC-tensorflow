@@ -1,1 +1,1 @@
-[["m :  the bus to the seaside left 5 minutes ago .  how often does it come ? ", "w :  every 20 minutes . "], [{"question": "how long will the man have to wait ? ", "choice": ["5 minutes", "15 minutes", "20 minutes"], "answer": "15 minutes"}], "4 - 2"]
+[["m :  the bus to the seaside left 5 minutes ago .  how often does it come ? ", "w :  every 2 0 minutes . "], [{"question": "how long will the man have to wait ? ", "choice": ["5 minutes", "1 5 minutes", "2 0 minutes"], "answer": "1 5 minutes"}], "4 - 2"]

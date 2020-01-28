@@ -7,6 +7,7 @@ import re
 from shutil import rmtree
 from os import listdir, mkdir
 from os.path import join, isfile, isdir, dirname, basename, normpath, abspath, exists
+from word2number import w2n
 
 
 def llprint(message):
@@ -34,6 +35,12 @@ def clean_sentences(sentence_list):
         sentence = sentence.replace(':', ' : ')
         sentence = sentence.replace(';', ' ; ')
         sentence = sentence.replace("'", " ' ")
+        for word in sentence:
+            try:
+                new_word = w2n.word_to_num(word)
+                sentence = sentence.replace(word, str(new_word))
+            except ValueError:
+                continue
         sentence = sentence.replace('-', ' - ')
         sentence = sentence.replace('×', ' × ')
         sentence = sentence.replace(',', ' ')
@@ -66,7 +73,16 @@ def clean_sentences(sentence_list):
             match = re.fullmatch(r"(_+)", word)
             if match:
                 sentence = sentence.replace(word, "_")
+            if word.isnumeric():
+                new_str = ""
+                for char in word:
+                    if len(new_str) != 0:
+                        new_str += f" {char}"
+                    else:
+                        new_str = char
+                sentence = sentence.replace(word, new_str)
         sentence_list[index] = sentence
+
     return sentence_list
 
 def clean_data(data):
@@ -234,10 +250,12 @@ if __name__ == '__main__':
 
     lexicon_dictionary = create_dictionary(all_questions)
     lexicon_count = len(lexicon_dictionary)
-    # for key in lexicon_dictionary.keys():
-    #     if not key.isalpha() and not key.isnumeric():
-    #         print(key)
-    # exit()
+
+    print(f"There are {len([entry for entry in lexicon_dictionary if entry.isnumeric()])} numbers.")
+    with open(join(task_dir, 'data', 'dictionary_entries.json'), 'w+') as write_file:
+        json.dump(list(lexicon_dictionary.keys()), write_file)
+
+    exit()
 
     processed_data_dir = join(task_dir, 'data', 'encoded')
     train_data_dir = join(processed_data_dir, 'train')

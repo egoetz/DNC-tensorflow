@@ -1,1 +1,1 @@
-[["w :  front desk .  can i help you ? ", "m :  yeah  hi  this is room 327 .  is your dining room still open ? "], [{"question": "where are the two speakers ? ", "choice": ["in a restaurant . ", "in a hotel . ", "in the street . "], "answer": "in a hotel . "}], "4 - 627"]
+[["w :  front desk .  can i help you ? ", "m :  yeah  hi  this is room 3 2 7 .  is your dining room still open ? "], [{"question": "where are the two speakers ? ", "choice": ["in a restaurant . ", "in a hotel . ", "in the street . "], "answer": "in a hotel . "}], "4 - 6 2 7"]

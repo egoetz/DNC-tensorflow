@@ -1,1 +1,1 @@
-[["f :  may i have your phone number please ? ", "m :  my home number is 5563457  and my office number is 5356876 . "], [{"question": "what is the man ' s office number ? ", "choice": ["5563475 . ", "5356876 . ", "5353475 . "], "answer": "5356876 . "}], "12 - 116"]
+[["f :  may i have your phone number please ? ", "m :  my home number is 5 5 6 3 4 5 7  and my office number is 5 3 5 6 8 7 6 . "], [{"question": "what is the man ' s office number ? ", "choice": ["5 5 6 3 4 7 5 . ", "5 3 5 6 8 7 6 . ", "5 3 5 3 4 7 5 . "], "answer": "5 3 5 6 8 7 6 . "}], "1 2 - 1 1 6"]

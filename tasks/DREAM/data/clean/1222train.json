@@ -1,1 +1,1 @@
-[["m :  john is a head taller than mary and shelly . ", "w :  yes  but sam is much taller than john . "], [{"question": "who is the tallest among the four ? ", "choice": ["john . ", "sam . ", "mary . "], "answer": "sam . "}], "21 - 328"]
+[["m :  john is a head taller than mary and shelly . ", "w :  yes  but sam is much taller than john . "], [{"question": "who is the tallest among the four ? ", "choice": ["john . ", "sam . ", "mary . "], "answer": "sam . "}], "2 1 - 3 2 8"]

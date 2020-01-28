@@ -1,1 +1,1 @@
-[["m :  excuse me  what is the time by your watch ? ", "w :  half past nine .  but it ' s 10 minutes slow . ", "m :  thanks . "], [{"question": "what is the correct time now ? ", "choice": ["9 : 30 . ", "9 : 25 . ", "9 : 40 . "], "answer": "9 : 40 . "}], "15 - 152"]
+[["m :  excuse me  what is the time by your watch ? ", "w :  half past nine .  but it ' s 1 0 minutes slow . ", "m :  thanks . "], [{"question": "what is the correct time now ? ", "choice": ["9 : 3 0 . ", "9 : 2 5 . ", "9 : 4 0 . "], "answer": "9 : 4 0 . "}], "1 5 - 1 52"]
