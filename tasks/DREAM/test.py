@@ -5,6 +5,7 @@ from dnc.dnc import DNC
 import tensorflow as tf
 import numpy as np
 import pickle
+import json
 import sys
 import os
 import re
@@ -47,13 +48,13 @@ def prepare_sample(sample, target_code, word_space_size):
 
 
 ckpts_dir = './checkpoints/'
-lexicon_dictionary = load('./data/en-10k/lexicon-dict.pkl')
+lexicon_dictionary = load('./data/encoded/lexicon-dict.pkl')
 question_code = lexicon_dictionary["?"]
 target_code = lexicon_dictionary["-"]
 test_files = []
 
-for entry_name in os.listdir('./data/en-10k/test/'):
-    entry_path = os.path.join('./data/en-10k/test/', entry_name)
+for entry_name in os.listdir('./data/encoded/test/'):
+    entry_path = os.path.join('./data/encoded/test/', entry_name)
     if os.path.isfile(entry_path):
         test_files.append(entry_path)
 
@@ -71,7 +72,7 @@ with graph.as_default():
             memory_read_heads=4,
         )
 
-        ncomputer.restore(session, ckpts_dir, 'step-228')
+        ncomputer.restore(session, ckpts_dir, 'step-100001')
 
         outputs, _ = ncomputer.get_outputs()
         softmaxed = tf.nn.softmax(outputs)
@@ -79,7 +80,9 @@ with graph.as_default():
         tasks_results = {}
         tasks_names = {}
         for test_file in test_files:
-            test_data = load(test_file)
+            print(test_file)
+            with open(test_file) as f:
+                test_data = json.load(f)
             task_regexp = r'qa([0-9]{1,2})_([a-z\-]*)_test.txt.pkl'
             task_filename = os.path.basename(test_file)
             task_match_obj = re.match(task_regexp, task_filename)

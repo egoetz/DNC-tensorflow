@@ -11,8 +11,10 @@ import sys
 import os
 import json
 
-from dnc.dnc import DNC
 from recurrent_controller import RecurrentController
+sys.path.append('./dnc')
+
+from dnc.dnc import DNC
 
 
 def llprint(message):
@@ -149,6 +151,8 @@ if __name__ == '__main__':
 
             start = 0 if start_step == 0 else start_step + 1
             end = start_step + iterations + 1
+            if from_checkpoint is not None:
+                start = int(from_checkpoint[from_checkpoint.find("-") + 1:])
 
             start_time_100 = time.time()
             end_time_100 = None
