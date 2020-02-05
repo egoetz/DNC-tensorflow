@@ -8,6 +8,7 @@ from shutil import rmtree
 from os import listdir, mkdir
 from os.path import join, isfile, isdir, dirname, basename, normpath, abspath, exists
 from word2number import w2n
+from cleaning import sentence_dict, spacing_dict, pattern_dict, spelling_dict
 
 
 def llprint(message):
@@ -15,73 +16,60 @@ def llprint(message):
     sys.stdout.flush()
 
 def clean_sentences(sentence_list):
+    should_print = [[], [], []]
+    for sentence in sentence_list:
+        if sentence in sentence_dict.keys():
+            sentence_list[sentence_list.index(sentence)] = sentence_dict[sentence]
     for index, sentence in enumerate(sentence_list):
         # first separate . and ? away from words into separate lexicons
-        sentence = sentence.lower()
-        sentence = sentence.replace('.', ' . ')
-        sentence = sentence.replace('?', ' ? ')
-        sentence = sentence.replace('!', ' ! ')
-        sentence = sentence.replace('~', ' ~ ')
-        sentence = sentence.replace('%', ' % ')
-        sentence = sentence.replace('°', ' ° ')
-        sentence = sentence.replace('$', ' $ ')
-        sentence = sentence.replace('£', ' £ ')
-        sentence = sentence.replace('@', ' @ ')
-        sentence = sentence.replace('"', ' " ')
-        sentence = sentence.replace('(', ' ( ')
-        sentence = sentence.replace(')', ' ) ')
-        sentence = sentence.replace('[', ' [ ')
-        sentence = sentence.replace(']', ' ] ')
-        sentence = sentence.replace(':', ' : ')
-        sentence = sentence.replace(';', ' ; ')
-        sentence = sentence.replace("'", " ' ")
+        new_sentence = sentence.lower()
+        for key in spacing_dict.keys():
+            old_sentence = new_sentence
+            new_sentence = new_sentence.replace(key, spacing_dict[key])
+            if old_sentence != new_sentence:
+                should_print[0].append(f"Spacing replacement, key {key}")
+        for key in spelling_dict.keys():
+            old_sentence = new_sentence
+            new_sentence = new_sentence.replace(key, spelling_dict[key])
+            if old_sentence != new_sentence:
+                should_print[1].append(f"Spelling replacement, key {key}")
         for word in sentence:
             try:
                 new_word = w2n.word_to_num(word)
-                sentence = sentence.replace(word, str(new_word))
+                new_sentence = new_sentence.replace(word, str(new_word))
             except ValueError:
                 continue
-        sentence = sentence.replace('-', ' - ')
-        sentence = sentence.replace('×', ' × ')
-        sentence = sentence.replace(',', ' ')
-        words = sentence.split(" ")
+        new_sentence = new_sentence.replace('-', ' - ')
+        words = new_sentence.split(" ")
         for word in words:
-            match = re.fullmatch(r"\d+(st|nd|rd|th)", word)
-            if match:
-                sentence = sentence.replace(word, word[:-2] + " " + word[-2:])
-            match = re.fullmatch(r"\d+s", word)
-            if match:
-                sentence = sentence.replace(word, word[:-1] + " s")
-            match = re.fullmatch(r"\d+mph", word)
-            if match:
-                sentence = sentence.replace(word, word[:-3] + " mph")
-            match = re.fullmatch(r"\d+pm", word)
-            if match:
-                sentence = sentence.replace(word, word[:-3] + " pm")
-            match = re.fullmatch(r"\d+kg", word)
-            if match:
-                sentence = sentence.replace(word, word[:-3] + " kg")
-            match = re.fullmatch(r"\d+km", word)
-            if match:
-                sentence = sentence.replace(word, word[:-3] + " km")
-            match = re.fullmatch(r"\d+p", word)
-            if match:
-                sentence = sentence.replace(word, word[:-3] + " p")
-            match = re.fullmatch(r"\d+era", word)
-            if match:
-                sentence = sentence.replace(word, word[:-3] + " era")
-            match = re.fullmatch(r"(_+)", word)
-            if match:
-                sentence = sentence.replace(word, "_")
+            for pattern in pattern_dict.keys():
+                match = re.fullmatch(pattern, word)
+                if match:
+                    old_sentence = new_sentence
+                    new_sentence = new_sentence.replace(word, pattern_dict[pattern])
+                    if old_sentence != new_sentence:
+                        should_print[2].append(f"Regex replacement, pattern {pattern}")
+        i = 0
+        while i < len(new_sentence.split()):
+            word = new_sentence.split()[i]
             if word.isnumeric():
                 new_str = ""
+                length_num = len(word)
                 for char in word:
                     if len(new_str) != 0:
                         new_str += f" {char}"
                     else:
                         new_str = char
-                sentence = sentence.replace(word, new_str)
-        sentence_list[index] = sentence
+                new_sentence = new_sentence.replace(word, new_str)
+                i += length_num
+            else:
+                i += 1
+        if "interviewe" in new_sentence.split():
+            print(sentence_list)
+            print("Before: ", sentence)
+            print("After: ", new_sentence)
+            print(should_print)
+        sentence_list[index] = new_sentence
 
     return sentence_list
 
