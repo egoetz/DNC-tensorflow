@@ -1,1 +1,0 @@
-[["w :  hello  may i speak to john ? ", "m :  he is having a meeting now .  would you please leave a message ? "], [{"question": "what is john doing now ? ", "choice": ["he is speaking to others . ", "he is having a meeting . ", "he is doing his work . "], "answer": "he is having a meeting . "}], "12 - 60"]

@@ -71,15 +71,16 @@ def clean_sentences(sentence_list):
         sentence_list[index] = sentence
     return sentence_list
 
+
 def clean_data(data):
     for i, entry in enumerate(data):
         for j in range(len(entry)):
             if j == 0:
                 data[i][j] = clean_sentences(entry[0])
             elif j == 1:
-                data[i][j][0]["question"] = clean_sentences([entry[1][0]["question"]])[0]
-                data[i][j][0]["choice"] = clean_sentences(entry[1][0]["choice"])
-                data[i][j][0]["answer"] = clean_sentences([entry[1][0]["answer"]])[0]
+                for k, question_dictionary in enumerate(entry[j]):
+                    data[i][j][k]["question"] = clean_sentences([question_dictionary["question"]])[0]
+                    data[i][j][k]["answer"] = clean_sentences([question_dictionary["answer"]])[0]
             else:
                 data[i][j] = clean_sentences([entry[j]])[0]
 
@@ -106,9 +107,9 @@ def create_dictionary(data):
 
     for index, entry in enumerate(data):
         sentences = entry[0]
-        sentences.append(entry[1][0]["question"])
-        sentences.extend(entry[1][0]["choice"])
-        sentences.append(entry[2])
+        for question_dictionary in entry[1]:
+            sentences.append(question_dictionary["question"])
+            sentences.append(question_dictionary["answer"])
         for sentence in sentences:
             for word in sentence.split():
                 if not word.lower() in lexicons_dict:
@@ -158,7 +159,7 @@ def encode_data(files_list, encoded_dir, lexicon_dictionary, length_limit=None):
 
     llprint("Encoding Data ... 0/%d" % (len(files_list)))
     for index, file_path in enumerate(files_list):
-        write_path = join(encoded_dir, basename(file_path))
+        write_path = join(encoded_dir, basename(file_path)[:basename(file_path).rfind('.json')])
         with open(file_path) as data:
             entry = json.load(data)
             for j in range(len(entry)):
@@ -170,20 +171,19 @@ def encode_data(files_list, encoded_dir, lexicon_dictionary, length_limit=None):
                         else:
                             story_inputs.append(lexicon_dictionary["+"])
                             story_inputs.extend(encoded_line)
-                elif j == 1:
-
                     story_inputs.append(lexicon_dictionary["\\"])
-                    story_inputs.extend(encode_sentences(entry[j][0]["question"], lexicon_dictionary))
+                elif j == 1:
+                    for i, question_dictionary in enumerate(entry[j]):
+                        question = encode_sentences(question_dictionary["question"], lexicon_dictionary)
 
-                    story_outputs = [lexicon_dictionary["="]]
-                    story_outputs.extend(encode_sentences(entry[j][0]["answer"], lexicon_dictionary))
-            full_list = story_inputs + story_outputs
-            with open(write_path, 'w+') as write_file:
-                json.dump(full_list, write_file)
+                        answer = [lexicon_dictionary["="]]
+                        answer.extend(encode_sentences(question_dictionary["answer"], lexicon_dictionary))
+                        full_list = story_inputs + question + answer
+                        with open(write_path + f"{i}.json", 'w+') as write_file:
+                            json.dump(full_list, write_file)
 
-        stories_lengths.append(len(story_inputs))
+                        stories_lengths.append(len(full_list))
         story_inputs = []
-        story_outputs = []
 
         llprint("\rEncoding Data ... %d/%d" % (index + 1, len(files_list)))
 
@@ -224,7 +224,7 @@ if __name__ == '__main__':
                 a_list = json.load(json_file)
                 a_list = clean_data(a_list)
                 for i, item in enumerate(a_list):
-                    write_path = join(task_dir, 'data', 'clean', f"{i}{a_file}")
+                    write_path = join(task_dir, 'data', 'clean', f"{item[2].replace(' ', '')}_{a_file}")
                     with open(write_path, 'w+') as write_file:
                         json.dump(item, write_file)
                     if a_file.endswith("train.json"):

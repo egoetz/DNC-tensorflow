@@ -1,1 +1,0 @@
-[["m :  shall we take a bus or the underground ? ", "w :  the stop is a bit far and i ' m too tired to walk .  i want to get a taxi home . ", "m :  all right . "], [{"question": "how are they going home ? ", "choice": ["by taxi . ", "by underground . ", "on foot . "], "answer": "by taxi . "}], "8 - 11"]

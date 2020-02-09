@@ -1,1 +1,0 @@
-[["m :  hello  i want a cab . ", "w :  ok .  what address is it ? ", "m :  1120  east 32 nd street . ", "w :  right .  the cab will be there in several minutes . "], [{"question": "what is the address given by the man ? ", "choice": ["1120  east 42 nd street . ", "1120  east 32 nd street . ", "1220  east 32 nd street . "], "answer": "1120  east 32 nd street . "}], "17 - 213"]

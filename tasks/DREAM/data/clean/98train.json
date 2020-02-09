@@ -1,1 +1,0 @@
-[["m :  the train leaves every 30 minutes .  you ' re five minutes late for the 7 : 30 train . ", "w :  sorry  i have to catch the next train . "], [{"question": "when will the next train come ? ", "choice": ["at 8 :  35 . ", "at 8 : 45 . ", "at 8 :  00 . "], "answer": "at 8 :  00 . "}], "21 - 47"]

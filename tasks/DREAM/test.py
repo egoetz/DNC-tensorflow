@@ -9,6 +9,8 @@ import json
 import sys
 import os
 import re
+import csv
+import statistics
 
 
 def llprint(message):
@@ -27,15 +29,16 @@ def onehot(index, size):
 
 
 def prepare_sample(sample, target_code, word_space_size):
-    input_vec = np.array(sample[0]['inputs'], dtype=np.float32)
-    output_vec = np.array(sample[0]['inputs'], dtype=np.float32)
+    input_vec = sample[:sample.index(target_code)]
+    output_vec = np.array(sample, dtype=np.float32)
+    while len(input_vec) < len(output_vec):
+        input_vec.append(target_code)
+    input_vec = np.array(input_vec, dtype=np.float32)
     seq_len = input_vec.shape[0]
     weights_vec = np.zeros(seq_len, dtype=np.float32)
 
     target_mask = (input_vec == target_code)
-    output_vec[target_mask] = sample[0]['outputs']
     weights_vec[target_mask] = 1.0
-
     input_vec = np.array([onehot(int(code), word_space_size) for code in input_vec])
     output_vec = np.array([onehot(int(code), word_space_size) for code in output_vec])
 
@@ -47,105 +50,113 @@ def prepare_sample(sample, target_code, word_space_size):
     )
 
 
-ckpts_dir = './checkpoints/'
-lexicon_dictionary = load('./data/encoded/lexicon-dict.pkl')
-question_code = lexicon_dictionary["?"]
-target_code = lexicon_dictionary["-"]
-test_files = []
+if __name__ == '__main__':
+    ckpts_dir = './checkpoints/'
+    lexicon_dictionary = load('./data/encoded/lexicon-dict.pkl')
+    question_code = lexicon_dictionary["="]
+    target_code = lexicon_dictionary["-"]
+    test_files = []
 
-for entry_name in os.listdir('./data/encoded/test/'):
-    entry_path = os.path.join('./data/encoded/test/', entry_name)
-    if os.path.isfile(entry_path):
-        test_files.append(entry_path)
+    for entry_name in os.listdir('./data/encoded/test/'):
+        entry_path = os.path.join('./data/encoded/test/', entry_name)
+        if os.path.isfile(entry_path):
+            test_files.append(entry_path)
 
-graph = tf.Graph()
-with graph.as_default():
-    with tf.compat.v1.Session(graph=graph) as session:
+    for filename in [os.path.join('data', 'annotator1_test.txt'), os.path.join('data', 'annotator2_test.txt')]:
+        with open(filename) as csvfile:
+            readCSV = csv.reader(csvfile, delimiter='\t')
+            question_types = {}
+            for row in readCSV:
+                task_number = row[0]
+                question_type = row[2]
+                if task_number in question_types:
+                    if len(question_types[task_number]) < 2:
+                        question_types[task_number].append(question_type)
+                else:
+                    question_types[task_number] = [question_type]
 
-        ncomputer = DNC(
-            RecurrentController,
-            input_size=len(lexicon_dictionary),
-            output_size=len(lexicon_dictionary),
-            max_sequence_length=100,
-            memory_words_num=256,
-            memory_word_size=64,
-            memory_read_heads=4,
-        )
+    graph = tf.Graph()
+    with graph.as_default():
+        with tf.compat.v1.Session(graph=graph) as session:
 
-        ncomputer.restore(session, ckpts_dir, 'step-100001')
+            ncomputer = DNC(
+                RecurrentController,
+                input_size=len(lexicon_dictionary),
+                output_size=len(lexicon_dictionary),
+                max_sequence_length=100,
+                memory_words_num=256,
+                memory_word_size=64,
+                memory_read_heads=4,
+            )
 
-        outputs, _ = ncomputer.get_outputs()
-        softmaxed = tf.nn.softmax(outputs)
+            ncomputer.restore(session, ckpts_dir, 'step-104')
 
-        tasks_results = {}
-        tasks_names = {}
-        for test_file in test_files:
-            print(test_file)
-            with open(test_file) as f:
-                test_data = json.load(f)
-            task_regexp = r'qa([0-9]{1,2})_([a-z\-]*)_test.txt.pkl'
-            task_filename = os.path.basename(test_file)
-            task_match_obj = re.match(task_regexp, task_filename)
-            task_number = task_match_obj.group(1)
-            task_name = task_match_obj.group(2).replace('-', ' ')
-            tasks_names[task_number] = task_name
-            counter = 0
+            outputs, _ = ncomputer.get_outputs()
+            softmaxed = tf.nn.softmax(outputs)
+
+            test_names = []
+            test_data = []
+            test_data_types = []
+            for counter, test_file in enumerate(test_files):
+                task_regexp = r'([0-9])+-([0-9])+_test([0-9])+.json'
+                task_filename = os.path.basename(test_file)
+                task_match_obj = re.match(task_regexp, task_filename)
+                if task_match_obj:
+                    with open(test_file) as f:
+                        test_data.append(json.load(f))
+                    task_number = task_match_obj.group(0)[:task_match_obj.group(0).rfind('_')]
+                    if task_number in question_types:
+                        task_types = question_types[task_number]
+                    else:
+                        task_types = None
+                    test_data_types.append(task_types)
+                    task_name = f"Test {test_file[test_file.find(os.path.basename(test_file)):test_file.rfind('_')]} (Question {test_file[-6]})"
+                    test_names.append(task_name)
+                    llprint("\r%s ... %d/%d" % (task_name, counter + 1, len(test_files)))
+
             results = []
+            tasks_results = {}
+            for i, story in enumerate(test_data):
+                question_index = story.index(question_code)
 
-            llprint("%s ... %d/%d" % (task_name, counter, len(test_data)))
-
-            for story in test_data:
-                a_story = np.array(story['inputs'])
-                questions_indices = np.argwhere(a_story == question_code)
-                questions_indices = np.reshape(questions_indices, (-1,))
-                target_mask = (a_story == target_code)
-
-                desired_answers = np.array(story['outputs'])
-                input_vec, _, seq_len, _ = prepare_sample([story], target_code, len(lexicon_dictionary))
+                desired_answers = np.array(story)
+                input_vec, _, seq_len, _ = prepare_sample(story, lexicon_dictionary['='], len(lexicon_dictionary))
                 softmax_output = session.run(softmaxed, feed_dict={
                     ncomputer.input_data: input_vec,
                     ncomputer.sequence_length: seq_len
                 })
 
                 softmax_output = np.squeeze(softmax_output, axis=0)
-                given_answers = np.argmax(softmax_output[target_mask], axis=1)
+                given_answers = np.argmax(softmax_output[question_index + 1:], axis=1)
 
                 answers_cursor = 0
-                for question_index in questions_indices:
-                    question_grade = []
-                    targets_cursor = question_index + 1
-                    while targets_cursor < len(a_story) and a_story[targets_cursor] == target_code:
-                        question_grade.append(given_answers[answers_cursor] == desired_answers[answers_cursor])
-                        answers_cursor += 1
-                        targets_cursor += 1
-                    results.append(np.prod(question_grade))
+                question_grade = []
+                targets_cursor = question_index + 1
+                while targets_cursor < len(story):
+                    question_grade.append(given_answers[answers_cursor] == desired_answers[answers_cursor])
+                    answers_cursor += 1
+                    targets_cursor += 1
+                results.append(np.prod(question_grade))
+                if test_data_types[i] is not None:
+                    for annotator_str in test_data_types[i]:
+                        for char in annotator_str:
+                            if char in tasks_results:
+                                tasks_results[char].append(np.prod(question_grade))
+                            else:
+                                tasks_results[char] = [np.prod(question_grade)]
 
-                counter += 1
-                llprint("\r%s ... %d/%d" % (task_name, counter, len(test_data)))
-
+                llprint("\r%s ... %d/%d" % (test_names[i], i, len(test_data)))
             error_rate = 1. - np.mean(results)
-            tasks_results[task_number] = error_rate
             llprint("\r%s ... %.3f%% Error Rate.\n" % (task_name, error_rate * 100))
 
-        print("\n")
-        print("%-27s%-27s%s" % ("Task", "Result", "Paper's Mean"))
-        print("-------------------------------------------------------------------")
-        paper_means = {
-            '1': '9.0±12.6%', '2': '39.2±20.5%', '3': '39.6±16.4%',
-            '4': '0.4±0.7%', '5': '1.5±1.0%', '6': '6.9±7.5%', '7': '9.8±7.0%',
-            '8': '5.5±5.9%', '9': '7.7±8.3%', '10': '9.6±11.4%', '11': '3.3±5.7%',
-            '12': '5.0±6.3%', '13': '3.1±3.6%', '14': '11.0±7.5%', '15': '27.2±20.1%',
-            '16': '53.6±1.9%', '17': '32.4±8.0%', '18': '4.2±1.8%', '19': '64.6±37.4%',
-            '20': '0.0±0.1%', 'mean': '16.7±7.6%', 'fail': '11.2±5.4'
-        }
-        for k in range(20):
-            task_id = str(k + 1)
-            task_result = "%.2f%%" % (tasks_results[task_id] * 100)
-            print("%-27s%-27s%s" % (tasks_names[task_id], task_result, paper_means[task_id]))
-        print("-------------------------------------------------------------------")
-        all_tasks_results = [v for _, v in tasks_results.items()]
-        results_mean = "%.2f%%" % (np.mean(all_tasks_results) * 100)
-        failed_count = "%d" % (np.sum(np.array(all_tasks_results) > 0.05))
+            print("\n")
+            print("%-27s%-27s%s" % ("Task", "Mean", "Standard Deviation"))
+            print("-------------------------------------------------------------------")
+            for task in tasks_results.keys():
+                print("%-27s%-27s%s" % (task, statistics.mean(tasks_results[task]), statistics.stdev(tasks_results[task])))
+            print("-------------------------------------------------------------------")
+            results_mean = "%.2f%%" % (np.mean(results) * 100)
+            failed_count = "%d" % (np.sum(np.array(results) > 0.05))
 
-        print("%-27s%-27s%s" % ("Mean Err.", results_mean, paper_means['mean']))
-        print("%-27s%-27s%s" % ("Failed (err. > 5%)", failed_count, paper_means['fail']))
+            print("%-27s%-27s" % ("Mean Err.", results_mean))
+            print("%-27s%-27s" % ("Failed (err. > 5%)", failed_count))

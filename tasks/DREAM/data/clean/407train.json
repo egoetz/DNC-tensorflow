@@ -1,1 +1,0 @@
-[["m :  excuse me  miss  what time is flight 298 for beijing due to depart ? ", "w :  it leaves at 9 : 30  but you must check in one hour ahead of departure . "], [{"question": "at what time must the passenger arrive at the airport for flight 298 ? ", "choice": ["9 : 30 . ", "10 : 30 . ", "8 : 30 . "], "answer": "8 : 30 . "}], "21 - 234"]

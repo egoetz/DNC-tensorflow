@@ -1,1 +1,0 @@
-[["f :  the meeting will start at 11 this morning  right ? ", "m :  it is put off to 2 this afternoon . "], [{"question": "when will the meeting begin ? ", "choice": ["10 in the morning", "11 in the morning", "12 in the afternoon"], "answer": "12 in the afternoon"}], "12 - 582"]

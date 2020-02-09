@@ -1,1 +1,0 @@
-[["w :  good evening .  how can i help you ? ", "m :  do you have any rooms ? ", "w :  yes  would you like a single room  a double room  or a twin room ? ", "m :  single  please . "], [{"question": "what room does the man want ? ", "choice": ["single", "double", "twin"], "answer": "single"}], "7 - 388"]
