@@ -30,6 +30,7 @@ sentence_dict = {
 }
 
 spacing_dict = {
+    "can't": "cannot",
     'tothe': 'to the',
     'mayfail': 'may fail',
     'kungfu': 'kung fu',
@@ -180,7 +181,7 @@ pattern_dict = {
     r"u(m+)": "um",
     r"b(r+)": "brr",
     r"disturbe": "disturbed",
-    r"cant": " can not",
+    r"cant": " cannot",
     r"forme": 'for me',
     r"judg": 'judge',
     r"clini": 'clinic',

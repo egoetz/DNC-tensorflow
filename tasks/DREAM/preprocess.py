@@ -21,6 +21,7 @@ def llprint(message):
 
 def clean_sentences(sentence_list):
     should_print = [[], [], []]
+    new_sentence_list = []
     for sentence in sentence_list:
         if sentence in sentence_dict.keys():
             sentence_list[sentence_list.index(sentence)] = sentence_dict[sentence]
@@ -71,9 +72,9 @@ def clean_sentences(sentence_list):
                     new_sentence = " ".join(new_sentence)
                     if old_sentence != new_sentence:
                         should_print[2].append(f"Regex replacement, pattern {pattern}")
-        i = 0
-        while i < len(new_sentence.split()):
-            word = new_sentence.split()[i]
+
+        words = new_sentence.split()
+        for word in words:
             if word.isnumeric():
                 new_str = ""
                 length_num = len(word)
@@ -82,11 +83,14 @@ def clean_sentences(sentence_list):
                         new_str += f" {char}"
                     else:
                         new_str = char
-                new_sentence = new_sentence.replace(word, new_str)
-                i += length_num
-            else:
-                i += 1
-    return sentence_list
+                old_sentence = new_sentence
+                new_sentence = old_sentence.split()
+                for i in range(len(new_sentence)):
+                    if new_sentence[i] == word:
+                        new_sentence[i] = new_str
+                new_sentence = " ".join(new_sentence)
+        new_sentence_list.append(new_sentence)
+    return new_sentence_list
 
 
 def clean_data(data):
@@ -98,8 +102,6 @@ def clean_data(data):
                 for k, question_dictionary in enumerate(entry[j]):
                     data[i][j][k]["question"] = clean_sentences([question_dictionary["question"]])[0]
                     data[i][j][k]["answer"] = clean_sentences([question_dictionary["answer"]])[0]
-            else:
-                data[i][j] = clean_sentences([entry[j]])[0]
 
     return data
 
@@ -147,10 +149,7 @@ def create_dictionary(data):
 def encode_sentences(sentences, lexicon_dictionary):
     new_sentence = []
     for word in sentences.split():
-        if len(new_sentence) == 0:
-            new_sentence.append(lexicon_dictionary[word])
-        else:
-            new_sentence.append(lexicon_dictionary[word])
+        new_sentence.append(lexicon_dictionary[word])
     return new_sentence
 
 

@@ -89,7 +89,7 @@ if __name__ == '__main__':
                 memory_read_heads=4,
             )
 
-            ncomputer.restore(session, ckpts_dir, 'step-104')
+            ncomputer.restore(session, ckpts_dir, 'step-251')
 
             outputs, _ = ncomputer.get_outputs()
             softmaxed = tf.nn.softmax(outputs)
@@ -152,11 +152,17 @@ if __name__ == '__main__':
             print("\n")
             print("%-27s%-27s%s" % ("Task", "Mean", "Standard Deviation"))
             print("-------------------------------------------------------------------")
+            means = []
             for task in tasks_results.keys():
-                print("%-27s%-27s%s" % (task, statistics.mean(tasks_results[task]), statistics.stdev(tasks_results[task])))
+                means.append(statistics.mean(tasks_results[task]))
+                print("%-27s%-27s%s" % (task, means[-1], statistics.stdev(tasks_results[task])))
             print("-------------------------------------------------------------------")
             results_mean = "%.2f%%" % (np.mean(results) * 100)
-            failed_count = "%d" % (np.sum(np.array(results) > 0.05))
+            failed_count = "%d" % (np.sum(means < 0.05))
 
             print("%-27s%-27s" % ("Mean Err.", results_mean))
+            failed_count = 0
+            for mean in means:
+                if mean < .95:
+                    failed_count += 1
             print("%-27s%-27s" % ("Failed (err. > 5%)", failed_count))
