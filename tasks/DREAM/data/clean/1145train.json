@@ -1,1 +1,0 @@
-[["w :  do you know what time the fruit shop opens ? ", "m :  it usually opens at half past seven  but on sunday it opens half an hour later . "], [{"question": "what time does the fruit shop open on sunday ? ", "choice": ["at 7 : 0 0 . ", "at 7 : 3 0 . ", "at 8 : 0 0"], "answer": "at 8 : 0 0"}], "1 1 - 2 2 9"]

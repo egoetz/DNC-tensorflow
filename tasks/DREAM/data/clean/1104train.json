@@ -1,1 +1,0 @@
-[["w :  does the play start at 6 : 0 0 or 6 : 1 5 ? ", "m :  neither .  it starts at 6 : 3 0 and ends at 8 : 0 0 . "], [{"question": "when does the play start ? ", "choice": ["at 6 : 3 0 . ", "at 8 : 0 0 . ", "at 6 : 0 0 . "], "answer": "at 6 : 3 0 . "}], "3 - 2 1 2"]
