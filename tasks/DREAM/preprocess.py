@@ -8,12 +8,14 @@ from shutil import rmtree
 from os import listdir, mkdir
 from os.path import join, isfile, isdir, dirname, basename, normpath, abspath, exists
 from word2number import w2n
+from string import punctuation
 from cleaning import sentence_dict, spacing_dict, pattern_dict, spelling_dict
 
 
 def llprint(message):
     sys.stdout.write(message)
     sys.stdout.flush()
+
 
 def clean_sentences(sentence_list):
     should_print = [[], [], []]
@@ -22,7 +24,21 @@ def clean_sentences(sentence_list):
             sentence_list[sentence_list.index(sentence)] = sentence_dict[sentence]
     for index, sentence in enumerate(sentence_list):
         # first separate . and ? away from words into separate lexicons
-        new_sentence = sentence.lower()
+        capitalized = set()
+        abbrivations = set()
+        for word in sentence.split():
+            if word.istitle():
+                capitalized.add(word)
+            if word.isupper():
+                abbrivations.add(word)
+        new_sentence = sentence.split(" ")
+        for i in range(len(new_sentence)):
+            if new_sentence[i] in capitalized:
+                new_sentence[i] = f" ^ {new_sentence[i]}"
+            if new_sentence[i] in abbrivations:
+                new_sentence[i] = f" ^^ {new_sentence[i]}"
+        new_sentence = " ".join(new_sentence)
+        new_sentence = new_sentence.lower()
         for key in spacing_dict.keys():
             old_sentence = new_sentence
             new_sentence = new_sentence.replace(key, spacing_dict[key])
@@ -46,7 +62,11 @@ def clean_sentences(sentence_list):
                 match = re.fullmatch(pattern, word)
                 if match:
                     old_sentence = new_sentence
-                    new_sentence = new_sentence.replace(word, pattern_dict[pattern])
+                    new_sentence = old_sentence.split()
+                    for i in range(len(new_sentence)):
+                        if new_sentence[i] == word:
+                            new_sentence[i] = pattern_dict[pattern]
+                    new_sentence = " ".join(new_sentence)
                     if old_sentence != new_sentence:
                         should_print[2].append(f"Regex replacement, pattern {pattern}")
         i = 0
@@ -64,14 +84,8 @@ def clean_sentences(sentence_list):
                 i += length_num
             else:
                 i += 1
-        if "interviewe" in new_sentence.split():
-            print(sentence_list)
-            print("Before: ", sentence)
-            print("After: ", new_sentence)
-            print(should_print)
-        sentence_list[index] = new_sentence
-
     return sentence_list
+
 
 def clean_data(data):
     for i, entry in enumerate(data):
@@ -79,9 +93,9 @@ def clean_data(data):
             if j == 0:
                 data[i][j] = clean_sentences(entry[0])
             elif j == 1:
-                data[i][j][0]["question"] = clean_sentences([entry[1][0]["question"]])[0]
-                data[i][j][0]["choice"] = clean_sentences(entry[1][0]["choice"])
-                data[i][j][0]["answer"] = clean_sentences([entry[1][0]["answer"]])[0]
+                for k, question_dictionary in enumerate(entry[j]):
+                    data[i][j][k]["question"] = clean_sentences([question_dictionary["question"]])[0]
+                    data[i][j][k]["answer"] = clean_sentences([question_dictionary["answer"]])[0]
             else:
                 data[i][j] = clean_sentences([entry[j]])[0]
 
@@ -108,9 +122,9 @@ def create_dictionary(data):
 
     for index, entry in enumerate(data):
         sentences = entry[0]
-        sentences.append(entry[1][0]["question"])
-        sentences.extend(entry[1][0]["choice"])
-        sentences.append(entry[2])
+        for question_dictionary in entry[1]:
+            sentences.append(question_dictionary["question"])
+            sentences.append(question_dictionary["answer"])
         for sentence in sentences:
             for word in sentence.split():
                 if not word.lower() in lexicons_dict:
@@ -125,7 +139,6 @@ def create_dictionary(data):
     lexicons_dict['='] = id_counter
 
     print("\rCreating Dictionary ... Done!")
-    print(len(lexicons_dict))
     return lexicons_dict
 
 
@@ -160,7 +173,7 @@ def encode_data(files_list, encoded_dir, lexicon_dictionary, length_limit=None):
 
     llprint("Encoding Data ... 0/%d" % (len(files_list)))
     for index, file_path in enumerate(files_list):
-        write_path = join(encoded_dir, basename(file_path))
+        write_path = join(encoded_dir, basename(file_path)[:basename(file_path).rfind('.json')])
         with open(file_path) as data:
             entry = json.load(data)
             for j in range(len(entry)):
@@ -172,20 +185,19 @@ def encode_data(files_list, encoded_dir, lexicon_dictionary, length_limit=None):
                         else:
                             story_inputs.append(lexicon_dictionary["+"])
                             story_inputs.extend(encoded_line)
-                elif j == 1:
-
                     story_inputs.append(lexicon_dictionary["\\"])
-                    story_inputs.extend(encode_sentences(entry[j][0]["question"], lexicon_dictionary))
+                elif j == 1:
+                    for i, question_dictionary in enumerate(entry[j]):
+                        question = encode_sentences(question_dictionary["question"], lexicon_dictionary)
 
-                    story_outputs = [lexicon_dictionary["="]]
-                    story_outputs.extend(encode_sentences(entry[j][0]["answer"], lexicon_dictionary))
-            full_list = story_inputs + story_outputs
-            with open(write_path, 'w+') as write_file:
-                json.dump(full_list, write_file)
+                        answer = [lexicon_dictionary["="]]
+                        answer.extend(encode_sentences(question_dictionary["answer"], lexicon_dictionary))
+                        full_list = story_inputs + question + answer
+                        with open(write_path + f"{i}.json", 'w+') as write_file:
+                            json.dump(full_list, write_file)
 
-        stories_lengths.append(len(story_inputs))
+                        stories_lengths.append(len(full_list))
         story_inputs = []
-        story_outputs = []
 
         llprint("\rEncoding Data ... %d/%d" % (index + 1, len(files_list)))
 
@@ -216,7 +228,10 @@ if __name__ == '__main__':
             length_limit = int(opt[1])
 
     if data_dir is None:
-        raise ValueError("data_dir argument cannot be None")
+        if exists(join(task_dir, 'data', 'unencoded')):
+            data_dir = join(task_dir, 'data', 'unencoded')
+        else:
+            raise ValueError("data_dir argument cannot be None")
 
     all_questions = []
     for a_file in listdir(data_dir):
@@ -226,7 +241,7 @@ if __name__ == '__main__':
                 a_list = json.load(json_file)
                 a_list = clean_data(a_list)
                 for i, item in enumerate(a_list):
-                    write_path = join(task_dir, 'data', 'clean', f"{i}{a_file}")
+                    write_path = join(task_dir, 'data', 'clean', f"{item[2].replace(' ', '')}_{a_file}")
                     with open(write_path, 'w+') as write_file:
                         json.dump(item, write_file)
                     if a_file.endswith("train.json"):
@@ -239,11 +254,13 @@ if __name__ == '__main__':
     lexicon_dictionary = create_dictionary(all_questions)
     lexicon_count = len(lexicon_dictionary)
 
-    print(f"There are {len([entry for entry in lexicon_dictionary if entry.isnumeric()])} numbers.")
+    print(f"There are {len(lexicon_dictionary)} unique words; "
+          f"{len([entry for entry in lexicon_dictionary if entry.isnumeric()])} of these words are numbers, "
+          f"{len([entry for entry in lexicon_dictionary if entry.isalpha()])} of these words are standard alphabetical words, and "
+          f"{len([entry for entry in lexicon_dictionary if entry in punctuation])} of these words are punctuation marks.")
     with open(join(task_dir, 'data', 'dictionary_entries.json'), 'w+') as write_file:
         json.dump(list(lexicon_dictionary.keys()), write_file)
 
-    exit()
 
     processed_data_dir = join(task_dir, 'data', 'encoded')
     train_data_dir = join(processed_data_dir, 'train')

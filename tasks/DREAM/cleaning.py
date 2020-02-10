@@ -23,7 +23,10 @@ sentence_dict = {
                                                              "dessert.",
     "W: I forget to tell you that the couple Simth won't come.": "W: I forget to tell you that the Smith couple "
                                                               "won't be coming.",
-    "Where does the dialogue most probab ly take place?": "Where does the dialogue most probably take place?"
+    "Where does the dialogue most probab ly take place?": "Where does the dialogue most probably take place?",
+    'Why is the science exam diff icult?': 'Why is the science exam difficult?',
+    'What is the propable relationship between the speakers?': 'What is the relationship between the speakers?'
+
 }
 
 spacing_dict = {
@@ -57,6 +60,7 @@ spacing_dict = {
     'theregion': 'the region',
     'ahistory': 'a history',
     'spendthe': 'spend the',
+    'whyis': 'why is',
     'hishomework': 'his homework',
     'firstjob': 'first job',
     'twobedroom': 'two bedroom',
@@ -187,15 +191,26 @@ pattern_dict = {
     r"beens": "beans",
     r"lous": "louis",
     r"inhis": "in his",
-    r"wock": "work"
+    r"wock": "work",
+    r"victori": "victoria",
+    r"interviewe": 'interviewee',
+    r"evenin": 'evening',
 }
 
 spelling_dict = {
     "restau-rant": "restaurant",
     "joes": "does",
-    " interviewe": ' interviewee',
     "theatcr": "theater",
     "volumn": "volume",
+    "meanns": "means",
+    "speakes": "speakers",
+    "professer": "professor",
+    "franch": "french",
+    "nosiy": "noisy",
+    "mter":"before",
+    "woinan": "woman",
+    "accout": "account",
+    "companuy": "company",
     "jetta": "jatta",
     "plice": "price",
     "moring": "morning",
@@ -218,6 +233,8 @@ spelling_dict = {
     'consulant': 'consultant',
     "bithday": "birthday",
     "yound": "young",
+    "sceond": "second",
+    "extremly": "extremely",
     "jime": "jaime",
     "receiner": "receiver",
     "tallking": "talking",
