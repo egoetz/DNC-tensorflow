@@ -54,14 +54,8 @@ def clean_sentences(sentence_list):
                 should_print[1].append(f"Spelling replacement, key {key}")
         for word in sentence.split():
             try:
-                if word == "one":
-                    print("Word: ", word)
                 new_word = w2n.word_to_num(word)
-                if word == "one":
-                    print("New Word: ", new_word)
                 new_sentence = new_sentence.replace(word, str(new_word))
-                if word == "one":
-                    print("New sentence: ", new_sentence)
             except ValueError:
                 continue
         new_sentence = new_sentence.replace('-', ' - ')
