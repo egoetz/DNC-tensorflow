@@ -28,17 +28,17 @@ def clean_sentences(sentence_list):
     for index, sentence in enumerate(sentence_list):
         # first separate . and ? away from words into separate lexicons
         capitalized = set()
-        abbrivations = set()
+        abbreviations = set()
         for word in sentence.split():
             if word.istitle():
                 capitalized.add(word)
             if word.isupper():
-                abbrivations.add(word)
-        new_sentence = sentence.split(" ")
+                abbreviations.add(word)
+        new_sentence = sentence.split()
         for i in range(len(new_sentence)):
             if new_sentence[i] in capitalized:
                 new_sentence[i] = f" ^ {new_sentence[i]}"
-            if new_sentence[i] in abbrivations:
+            if new_sentence[i] in abbreviations:
                 new_sentence[i] = f" ^^ {new_sentence[i]}"
         new_sentence = " ".join(new_sentence)
         new_sentence = new_sentence.lower()
@@ -52,14 +52,20 @@ def clean_sentences(sentence_list):
             new_sentence = new_sentence.replace(key, spelling_dict[key])
             if old_sentence != new_sentence:
                 should_print[1].append(f"Spelling replacement, key {key}")
-        for word in sentence:
+        for word in sentence.split():
             try:
+                if word == "one":
+                    print("Word: ", word)
                 new_word = w2n.word_to_num(word)
+                if word == "one":
+                    print("New Word: ", new_word)
                 new_sentence = new_sentence.replace(word, str(new_word))
+                if word == "one":
+                    print("New sentence: ", new_sentence)
             except ValueError:
                 continue
         new_sentence = new_sentence.replace('-', ' - ')
-        words = new_sentence.split(" ")
+        words = new_sentence.split()
         for word in words:
             for pattern in pattern_dict.keys():
                 match = re.fullmatch(pattern, word)
