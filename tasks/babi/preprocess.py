@@ -141,7 +141,10 @@ if __name__ == '__main__':
             length_limit = int(opt[1])
 
     if data_dir is None:
-        raise ValueError("data_dir argument cannot be None")
+        if exists(join(task_dir, 'data', 'unencoded')):
+            data_dir = join(task_dir, 'data', 'unencoded')
+        else:
+            raise ValueError("data_dir argument cannot be None")
 
     for entry_name in listdir(data_dir):
         entry_path = join(data_dir, entry_name)

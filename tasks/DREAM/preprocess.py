@@ -9,9 +9,8 @@ import re
 from shutil import rmtree
 from os import listdir, mkdir
 from os.path import join, isfile, isdir, dirname, basename, normpath, abspath, exists
-from word2number import w2n
 from string import punctuation
-from cleaning import sentence_dict, spacing_dict, pattern_dict, spelling_dict
+from cleaning import *
 
 
 def llprint(message):
@@ -20,20 +19,20 @@ def llprint(message):
 
 
 def clean_sentences(sentence_list):
-    should_print = [[], [], []]
     new_sentence_list = []
     for sentence in sentence_list:
         if sentence in sentence_dict.keys():
             sentence_list[sentence_list.index(sentence)] = sentence_dict[sentence]
+
     for index, sentence in enumerate(sentence_list):
-        # first separate . and ? away from words into separate lexicons
         capitalized = set()
         abbreviations = set()
         for word in sentence.split():
             if word.istitle():
                 capitalized.add(word)
-            if word.isupper():
+            elif word.isupper():
                 abbreviations.add(word)
+
         new_sentence = sentence.split()
         for i in range(len(new_sentence)):
             if new_sentence[i] in capitalized:
@@ -42,54 +41,66 @@ def clean_sentences(sentence_list):
                 new_sentence[i] = f" ^^ {new_sentence[i]}"
         new_sentence = " ".join(new_sentence)
         new_sentence = new_sentence.lower()
-        for key in spacing_dict.keys():
-            old_sentence = new_sentence
-            new_sentence = new_sentence.replace(key, spacing_dict[key])
-            if old_sentence != new_sentence:
-                should_print[0].append(f"Spacing replacement, key {key}")
-        for key in spelling_dict.keys():
-            old_sentence = new_sentence
-            new_sentence = new_sentence.replace(key, spelling_dict[key])
-            if old_sentence != new_sentence:
-                should_print[1].append(f"Spelling replacement, key {key}")
-        for word in sentence.split():
-            try:
-                new_word = w2n.word_to_num(word)
-                new_sentence = new_sentence.replace(word, str(new_word))
-            except ValueError:
-                continue
-        new_sentence = new_sentence.replace('-', ' - ')
-        words = new_sentence.split()
-        for word in words:
-            for pattern in pattern_dict.keys():
-                match = re.fullmatch(pattern, word)
-                if match:
-                    old_sentence = new_sentence
-                    new_sentence = old_sentence.split()
-                    for i in range(len(new_sentence)):
-                        if new_sentence[i] == word:
-                            new_sentence[i] = pattern_dict[pattern]
-                    new_sentence = " ".join(new_sentence)
-                    if old_sentence != new_sentence:
-                        should_print[2].append(f"Regex replacement, pattern {pattern}")
+
+        for symbol in symbols.keys():
+            if symbol in new_sentence:
+                new_sentence = new_sentence.replace(symbol, symbols[symbol])
 
         words = new_sentence.split()
         for word in words:
-            if word.isnumeric():
-                new_str = ""
-                length_num = len(word)
-                for char in word:
-                    if len(new_str) != 0:
-                        new_str += f" {char}"
+            for pattern in spelling_regex.keys():
+                match = re.fullmatch(pattern, word)
+                if match:
+                    new_sentence = new_sentence.split()
+                    for i in range(len(new_sentence)):
+                        if new_sentence[i] == word:
+                            new_sentence[i] = spelling_regex[pattern]
+                    new_sentence = " ".join(new_sentence)
+            for pattern in units.keys():
+                match = re.fullmatch(pattern, word)
+                if match:
+                    if pattern == r"\d{2,}s-\d{2,}s":
+                        new_sentence = new_sentence.split()
+                        for i in range(len(new_sentence)):
+                            if new_sentence[i] == word:
+                                new_sentence[i] = word[:word.find('s')] + " s - " + word[word.find("-") + 1:-1] + " s"
+                        new_sentence = " ".join(new_sentence)
                     else:
-                        new_str = char
-                old_sentence = new_sentence
-                new_sentence = old_sentence.split()
-                for i in range(len(new_sentence)):
-                    if new_sentence[i] == word:
-                        new_sentence[i] = new_str
-                new_sentence = " ".join(new_sentence)
+                        new_sentence = new_sentence.split()
+                        for i in range(len(new_sentence)):
+                            if new_sentence[i] == word:
+                                new_sentence[i] = word[:word.find(units[pattern])] + ' ' + units[pattern]
+                        new_sentence = " ".join(new_sentence)
+            for pattern in onomatopoeia:
+                match = re.fullmatch(pattern, word)
+                if match:
+                    new_sentence = new_sentence.split()
+                    for i in range(len(new_sentence)):
+                        if new_sentence[i] == word:
+                            new_sentence[i] = onomatopoeia[pattern]
+                    new_sentence = " ".join(new_sentence)
+
+        word_array = clean_word_array(new_sentence.split())
+        new_sentence = " ".join(word_array)
+
+        new_sentence = new_sentence.replace('-', ' - ')
+
+        serial_names = set()
+        for word in new_sentence.split():
+            if bool(re.match('^(?=.*[0-9])(?=.*[a-z])', word)):
+                serial_names.add(word)
+        new_sentence = new_sentence.split()
+        for i in range(len(new_sentence)):
+            if new_sentence[i] in serial_names:
+                new_sentence[i] = ' '.join([f"^ {character}" if character.isalpha() else character for character in new_sentence[i]])
+        new_sentence = " ".join(new_sentence)
+
+        for word in new_sentence.split():
+            if word == '×':
+                print(new_sentence)
+
         new_sentence_list.append(new_sentence)
+
     return new_sentence_list
 
 
@@ -259,6 +270,8 @@ if __name__ == '__main__':
           f"{len([entry for entry in lexicon_dictionary if entry.isnumeric()])} of these words are numbers, "
           f"{len([entry for entry in lexicon_dictionary if entry.isalpha()])} of these words are standard alphabetical words, and "
           f"{len([entry for entry in lexicon_dictionary if entry in punctuation])} of these words are punctuation marks.")
+    print([entry for entry in lexicon_dictionary if not entry.isnumeric() and not entry.isalpha() and not entry in punctuation
+           ])
     with open(join(task_dir, 'data', 'dictionary_entries.json'), 'w+') as write_file:
         json.dump(list(lexicon_dictionary.keys()), write_file)
 
