@@ -154,6 +154,8 @@ if __name__ == '__main__':
             if from_checkpoint is not None:
                 start = int(from_checkpoint[from_checkpoint.find("-") + 1:])
 
+            print(start)
+
             start_time_100 = time.time()
             end_time_100 = None
             avg_100_time = 0.

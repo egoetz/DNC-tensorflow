@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
 from recurrent_controller import RecurrentController
+import sys
+sys.path.append('./dnc')
 from dnc.dnc import DNC
 import tensorflow as tf
 import numpy as np
@@ -54,7 +56,7 @@ if __name__ == '__main__':
     ckpts_dir = './checkpoints/'
     lexicon_dictionary = load('./data/encoded/lexicon-dict.pkl')
     question_code = lexicon_dictionary["="]
-    target_code = lexicon_dictionary["-"]
+    #target_code = lexicon_dictionary["-"]
     test_files = []
 
     for entry_name in os.listdir('./data/encoded/test/'):
@@ -89,7 +91,7 @@ if __name__ == '__main__':
                 memory_read_heads=4,
             )
 
-            ncomputer.restore(session, ckpts_dir, 'step-251')
+            ncomputer.restore(session, ckpts_dir, 'step-100001')
 
             outputs, _ = ncomputer.get_outputs()
             softmaxed = tf.nn.softmax(outputs)
