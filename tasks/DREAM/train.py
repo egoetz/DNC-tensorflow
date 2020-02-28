@@ -32,17 +32,25 @@ def onehot(index, size):
     return vec
 
 
-def prepare_sample(sample, target_code, word_space_size):
-    input_vec = sample[:sample.index(target_code)]
-    output_vec = np.array(sample, dtype=np.float32)
-    while len(input_vec) < len(output_vec):
-        input_vec.append(target_code)
-    input_vec = np.array(input_vec, dtype=np.float32)
+def prepare_sample(sample, target_code, word_space_size, lexicon_dictionary):
+    # input_vec = sample[:sample.index(target_code)]
+    # output_vec = np.array(sample, dtype=np.float32)
+    # while len(input_vec) < len(output_vec):
+    #     input_vec.append(target_code)
+    # input_vec = np.array(input_vec, dtype=np.float32)
+    input_vec = np.array(sample[:sample.index(target_code)], dtype=np.float32)
+    output_vec = sample[sample.index(target_code) + 1:]
+    while len(output_vec) < len(input_vec):
+        output_vec.append(target_code)
+    output_vec = np.array(output_vec, dtype=np.float32)
     seq_len = input_vec.shape[0]
     weights_vec = np.zeros(seq_len, dtype=np.float32)
 
-    target_mask = (input_vec == target_code)
+    # target_mask = (input_vec == target_code)
+    target_mask = (output_vec != target_code)
     weights_vec[target_mask] = 1.0
+    #print("Input vector: ", [list(lexicon_dictionary.keys())[int(num)] for num in input_vec])
+    #print("Output vector: ", [list(lexicon_dictionary.keys())[int(num)] for num in output_vec])
     input_vec = np.array([onehot(int(code), word_space_size) for code in input_vec])
     output_vec = np.array([onehot(int(code), word_space_size) for code in output_vec])
 
@@ -55,7 +63,8 @@ def prepare_sample(sample, target_code, word_space_size):
 
 
 if __name__ == '__main__':
-
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+    tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
     dirname = os.path.dirname(__file__)
     ckpts_dir = os.path.join(dirname, 'checkpoints')
     data_dir = os.path.join(dirname, 'data', 'encoded')
@@ -87,6 +96,7 @@ if __name__ == '__main__':
     for opt in options:
         if opt[0] == '--checkpoint':
             from_checkpoint = opt[1]
+            print("Checkpoint found")
         elif opt[0] == '--iterations':
             iterations = int(opt[1])
         elif opt[0] == '--start':
@@ -146,6 +156,13 @@ if __name__ == '__main__':
                 llprint("Restoring Checkpoint %s ... " % from_checkpoint)
                 ncomputer.restore(session, ckpts_dir, from_checkpoint)
                 llprint("Done!\n")
+            elif os.path.exists(ckpts_dir):
+                checkpoints = os.listdir(ckpts_dir)
+                if len(checkpoints) != 0:
+                    checkpoint_numbers = [int(checkpoint[checkpoint.find("-") + 1:]) for checkpoint in checkpoints if checkpoint[checkpoint.find("-") + 1:].isnumeric()]
+                    checkpoint_numbers.sort()
+                    ncomputer.restore(session, ckpts_dir, f"step-{checkpoint_numbers[-1]}")
+                    start_step = checkpoint_numbers[-1]
 
             last_100_losses = []
 
@@ -169,26 +186,40 @@ if __name__ == '__main__':
                     with open(os.path.join(data_dir, 'train', sample[0])) as f:
                         sample = json.load(f)
                     input_data, target_output, seq_len, weights = prepare_sample(sample, lexicon_dict['='],
-                                                                                 word_space_size)
+                                                                                 word_space_size, lexicon_dict)
 
                     summarize = (i % 100 == 0)
-                    take_checkpoint = (i != 0) and (i % end == 0)
+                    take_checkpoint = (i != 0) and (i % 200 == 0)
+                    #For debugging
+                    outputs, _ = ncomputer.get_outputs()
+                    softmaxed = tf.nn.softmax(outputs)
 
-                    loss_value, _, summary = session.run([
+                    loss_value, _, summary, softmax_output = session.run([
                         loss,
                         apply_gradients,
-                        summarize_op if summarize else no_summarize
+                        summarize_op if summarize else no_summarize,
+                        softmaxed
                     ], feed_dict={
                         ncomputer.input_data: input_data,
                         ncomputer.target_output: target_output,
                         ncomputer.sequence_length: seq_len,
                         loss_weights: weights
                     })
+                    softmax_output = np.squeeze(softmax_output, axis=0)
+                    given_answers = np.argmax(softmax_output, axis=1)
+
+                    words = []
+                    for an_array in target_output[0]:
+                        for word in np.where(an_array == 1):
+                            words.extend([list(lexicon_dict.keys())[np.where(an_array == 1)[0][0]]])
 
                     last_100_losses.append(loss_value)
                     if summarize:
+                        print("\n\tLoss value: ", loss_value)
+                        print("\tTarget output: ", words)
+                        print("\tOutput: ", [list(lexicon_dict.keys())[num] for num in given_answers])
                         summarizer.add_summary(summary, i)
-                        llprint("\n\tAvg. Cross-Entropy: %.7f\n" % (np.mean(last_100_losses)))
+                        llprint("\tAvg. Cross-Entropy: %.7f\n" % (np.mean(last_100_losses)))
 
                         end_time_100 = time.time()
                         elapsed_time = (end_time_100 - start_time_100) / 60
@@ -197,7 +228,7 @@ if __name__ == '__main__':
                         estimated_time = (avg_100_time * ((end - i) / 100.)) / 60.
 
                         print("\tAvg. 100 iterations time: %.2f minutes" % avg_100_time)
-                        print("\tApprox. time to completion: %.2f hours" % estimated_time)
+                        print("\tApprox. time to completion: %.2f hours\n" % estimated_time)
 
                         start_time_100 = time.time()
                         last_100_losses = []

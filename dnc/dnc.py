@@ -1,8 +1,8 @@
 import tensorflow as tf
 from tensorflow.python.ops.rnn_cell import LSTMStateTuple
+import os
 from memory import Memory
 import utility
-import os
 
 
 class DNC:

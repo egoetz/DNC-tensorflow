@@ -30,17 +30,25 @@ def onehot(index, size):
     return vec
 
 
-def prepare_sample(sample, target_code, word_space_size):
-    input_vec = sample[:sample.index(target_code)]
-    output_vec = np.array(sample, dtype=np.float32)
-    while len(input_vec) < len(output_vec):
-        input_vec.append(target_code)
-    input_vec = np.array(input_vec, dtype=np.float32)
+def prepare_sample(sample, target_code, word_space_size, lexicon_dictionary):
+    # input_vec = sample[:sample.index(target_code)]
+    # output_vec = np.array(sample, dtype=np.float32)
+    # while len(input_vec) < len(output_vec):
+    #     input_vec.append(target_code)
+    # input_vec = np.array(input_vec, dtype=np.float32)
+    input_vec = np.array(sample[:sample.index(target_code)], dtype=np.float32)
+    output_vec = sample[sample.index(target_code) + 1:]
+    while len(output_vec) < len(input_vec):
+        output_vec.append(target_code)
+    output_vec = np.array(output_vec, dtype=np.float32)
     seq_len = input_vec.shape[0]
     weights_vec = np.zeros(seq_len, dtype=np.float32)
 
-    target_mask = (input_vec == target_code)
+    # target_mask = (input_vec == target_code)
+    target_mask = (output_vec != target_code)
     weights_vec[target_mask] = 1.0
+    #print("Input vector: ", [list(lexicon_dictionary.keys())[int(num)] for num in input_vec])
+    #print("Output vector: ", [list(lexicon_dictionary.keys())[int(num)] for num in output_vec])
     input_vec = np.array([onehot(int(code), word_space_size) for code in input_vec])
     output_vec = np.array([onehot(int(code), word_space_size) for code in output_vec])
 
@@ -91,7 +99,15 @@ if __name__ == '__main__':
                 memory_read_heads=4,
             )
 
-            ncomputer.restore(session, ckpts_dir, 'step-100001')
+            checkpoints = os.listdir(ckpts_dir)
+            if len(checkpoints) != 0:
+                checkpoint_numbers = [int(checkpoint[checkpoint.find("-") + 1:]) for checkpoint in checkpoints if
+                                      checkpoint[checkpoint.find("-") + 1:].isnumeric()]
+                checkpoint_numbers.sort()
+                ncomputer.restore(session, ckpts_dir, f"step-{checkpoint_numbers[-1]}")
+            else:
+                raise FileNotFoundError("No checkpoint to test.")
+
 
             outputs, _ = ncomputer.get_outputs()
             softmaxed = tf.nn.softmax(outputs)
@@ -118,6 +134,9 @@ if __name__ == '__main__':
 
             results = []
             tasks_results = {}
+            questions_and_answers = open("test_responses.csv", "w+")
+            questions_and_answers.write(f"Task Name\tDNC's Answer\tExpected Answer\tGrade\n")
+
             for i, story in enumerate(test_data):
                 question_index = story.index(question_code)
 
@@ -129,7 +148,7 @@ if __name__ == '__main__':
                 })
 
                 softmax_output = np.squeeze(softmax_output, axis=0)
-                given_answers = np.argmax(softmax_output[question_index + 1:], axis=1)
+                given_answers = np.argmax(softmax_output, axis=1)
 
                 answers_cursor = 0
                 question_grade = []
@@ -148,19 +167,30 @@ if __name__ == '__main__':
                                 tasks_results[char] = [np.prod(question_grade)]
 
                 llprint("\r%s ... %d/%d" % (test_names[i], i, len(test_data)))
+                # print("Given Answer: ", given_answers)
+                # print("Desired Answer: ", desired_answers)
+                # print("Question grade: ", question_grade)
+                word_given_answer = [list(lexicon_dictionary.keys())[num] for num in given_answers]
+                word_desired_answer = [list(lexicon_dictionary.keys())[num] for num in desired_answers]
+                questions_and_answers.write(f"{test_names[i]}\t{word_given_answer}\t{word_desired_answer}\t{question_grade}\n")
+            questions_and_answers.close()
             error_rate = 1. - np.mean(results)
             llprint("\r%s ... %.3f%% Error Rate.\n" % (task_name, error_rate * 100))
 
             print("\n")
-            print("%-27s%-27s%s" % ("Task", "Mean", "Standard Deviation"))
+            print("%-27s%-27s%s" % ("Task", "Mean % Error", "Standard Deviation"))
             print("-------------------------------------------------------------------")
             means = []
             for task in tasks_results.keys():
-                means.append(statistics.mean(tasks_results[task]))
-                print("%-27s%-27s%s" % (task, means[-1], statistics.stdev(tasks_results[task])))
+                means.append(np.mean(tasks_results[task]))
+                print("%-27s%-27s%s" % (task, (1 - means[-1]) * 100, statistics.stdev([(1 - result) * 100 for result in tasks_results[task]])))
             print("-------------------------------------------------------------------")
-            results_mean = "%.2f%%" % (np.mean(results) * 100)
-            failed_count = "%d" % (np.sum(means < 0.05))
+            results_mean = "%.2f%%" % (1 - np.mean(results) * 100)
+            failed_count = 0
+            for mean in means:
+                if mean < .95:
+                    failed_count += 1
+            failed_count = "%d" % (failed_count)
 
             print("%-27s%-27s" % ("Mean Err.", results_mean))
             failed_count = 0
