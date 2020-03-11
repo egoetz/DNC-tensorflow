@@ -66,7 +66,7 @@ if __name__ == '__main__':
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
     tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
     dirname = os.path.dirname(__file__)
-    ckpts_dir = os.path.join(dirname, 'checkpoints')
+    ckpts_dir = os.path.join(dirname, 'checkpoints/word_count_256')
     data_dir = os.path.join(dirname, 'data', 'encoded')
     tb_logs_dir = os.path.join(dirname, 'logs')
 
@@ -162,16 +162,16 @@ if __name__ == '__main__':
                     checkpoint_numbers = [int(checkpoint[checkpoint.find("-") + 1:]) for checkpoint in checkpoints if checkpoint[checkpoint.find("-") + 1:].isnumeric()]
                     checkpoint_numbers.sort()
                     ncomputer.restore(session, ckpts_dir, f"step-{checkpoint_numbers[-1]}")
-                    start_step = checkpoint_numbers[-1]
+                    start = checkpoint_numbers[-1]
+                    end = 100000
 
             last_100_losses = []
 
-            start = 0 if start_step == 0 else start_step + 1
-            end = start_step + iterations + 1
+            #start = 0 if start_step == 0 else start_step + 1
+            #end = start_step + iterations + 1
             if from_checkpoint is not None:
                 start = int(from_checkpoint[from_checkpoint.find("-") + 1:])
 
-            print(start)
 
             start_time_100 = time.time()
             end_time_100 = None

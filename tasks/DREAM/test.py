@@ -61,7 +61,7 @@ def prepare_sample(sample, target_code, word_space_size, lexicon_dictionary):
 
 
 if __name__ == '__main__':
-    ckpts_dir = './checkpoints/'
+    ckpts_dir = './checkpoints/word_count_256/'
     lexicon_dictionary = load('./data/encoded/lexicon-dict.pkl')
     question_code = lexicon_dictionary["="]
     #target_code = lexicon_dictionary["-"]
@@ -134,14 +134,14 @@ if __name__ == '__main__':
 
             results = []
             tasks_results = {}
-            questions_and_answers = open("test_responses.csv", "w+")
+            questions_and_answers = open("test_responses_answer_only.csv", "w+")
             questions_and_answers.write(f"Task Name\tDNC's Answer\tExpected Answer\tGrade\n")
-
             for i, story in enumerate(test_data):
                 question_index = story.index(question_code)
 
-                desired_answers = np.array(story)
-                input_vec, _, seq_len, _ = prepare_sample(story, lexicon_dictionary['='], len(lexicon_dictionary))
+                #desired_answers = np.array(story)
+                input_vec, desired_answers, seq_len, _ = prepare_sample(story, lexicon_dictionary['='], len(lexicon_dictionary), lexicon_dictionary)
+                desired_answers = [np.where(one_hot_arr == 1)[0][0] for one_hot_arr in desired_answers[0]]
                 softmax_output = session.run(softmaxed, feed_dict={
                     ncomputer.input_data: input_vec,
                     ncomputer.sequence_length: seq_len
@@ -171,6 +171,7 @@ if __name__ == '__main__':
                 # print("Desired Answer: ", desired_answers)
                 # print("Question grade: ", question_grade)
                 word_given_answer = [list(lexicon_dictionary.keys())[num] for num in given_answers]
+                print(word_given_answer)
                 word_desired_answer = [list(lexicon_dictionary.keys())[num] for num in desired_answers]
                 questions_and_answers.write(f"{test_names[i]}\t{word_given_answer}\t{word_desired_answer}\t{question_grade}\n")
             questions_and_answers.close()
