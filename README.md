@@ -3,7 +3,7 @@
 This is a TensorFlow implementation of DeepMind's Differentiable Neural Computer (DNC) architecture introduced in their recent Nature paper:
 > [Graves, Alex, et al. "Hybrid computing using a neural network with dynamic external memory." Nature 538.7626 (2016): 471-476.](http://www.nature.com/articles/nature20101.epdf?author_access_token=ImTXBI8aWbYxYQ51Plys8NRgN0jAjWel9jnR3ZoTv0MggmpDmwljGswxVdeocYSurJ3hxupzWuRNeGvvXnoO8o4jTJcnAyhGuZzXJ1GEaD-Z7E6X_a9R-xqJ9TfJWBqz)
 
-This implementation doesn't include all the tasks that was described in the paper, but it's focused on exploring and re-producing the general task-independent key characteristics of the architecture. However, the implementation was designed with extensibility in mind, so it's fairly simple to adapt it to further tasks.
+This implementation includes the bAbI tasks and the copy task from the paper, as implemented by Mostafa-Samir (you can email him at [mostafa.3210@gmail.com](mailto:mostfa.3210@gmail.com) or visit his Github profile [here](https://github.com/Mostafa-Samir)). These tasks have been updated to Python 3 and Tensorflow 2. Additionally, two new tasks have been written and included in the repository: the vowels task and the DREAM task. The vowels task simply trains the DNC to recognize and extract vowels from words (excluding y), while the DREAM task asks the DNC to answer questions on dialogue. Much thanks to Ken Sun et al for publishing [their research and dataset](https://dataset.org/dream/).
 
 ## Local Environment Specification
 
@@ -11,7 +11,7 @@ Copy experiments and tests ran on a machine with:
 - TensorFlow 2.1
 - Python 3.6
 
-bAbI experiment and tests ran on an AWS P2 instance on 1 Tesla K80 GPU.
+bAbI experiment and tests ran on an AWS P2 instance on 1 Tesla K80 GPU as well as a Nvidia GTX 1060 GPU, and on a standard Intel CPU. Note that the difference in running the bAbI and DREAM tasks on a GPU and running the bAbI and DREAM tasks on a CPU is substantial and it is recommended one use a GPU when possible.
 
 ## Experiments
 
@@ -76,6 +76,12 @@ This experiment was designed to reproduce the paper's results on the bAbI 20QA t
 | **Mean Err.**          | 15.78% | 16.7±7.6% |
 | **Failed (err. > 5%)** |  8     | 11.2±5.4 |
 
+## Vowels
+The vowels task was designed to test the DNC's ability to learn a simple task with a procedural solution. Here, the DNC was presented with a sequence of characters forming a word, this word was then followed by a "#" indicating the start of the answer plus a number of additional "#" equal to the number of characters in the answer that the DNC should give. The correct output for the DNC was to repeat the word it was given as well as the first "#", and substitute the remaining "#" symbols with the vowels instances from the original word in their order of appearance. For the sake of simplicity, we exclude 'y'. Trained on 100,000 examples, the DNC was able to pass a test on 1,000 words without getting a single response incorrect.
+
+## DREAM
+The DREAM test was designed to push the DNC to the limits of its capabilities and to thwart it. Much of the DNC's difficulty on the bAbI dataset task was found in positional reasoning and basic induction (the two tasks it failed in its original publication). It also had great difficulty when being trained on multiple tasks at once as opposed to being trained and tested on each type of test individually. By presenting the DNC with the DREAM dataset, we were asking it to recognize positions (as each line implicitedly indicated a different speaker), to induce answers (as the DREAM dataset focused on summary and logic questions), and to train on multiple tasks at once (as the DNC does not separate tasks and may actually require multiple skills to be used in a single question). When trained on 100,000 examples in two separate instances, the DNC was unable to solve a single question. A grid search needs to be conducted to confirm these results but preliminary results indicate where the neural network model may be lacking.
+
 ## Getting Involved
 
 If you're interested in using the implementation for new tasks, you should first start by **[reading the structure and basic usage guide](docs/basic-usage.md)** to get comfortable with how the project is structured and how it can be extended to new tasks.
@@ -83,23 +89,6 @@ If you're interested in using the implementation for new tasks, you should first
 If you intend to work with the source code of the implementation itself, you should begin with looking at **[the data flow diagrams](docs/data-flow.md)** to get a high-level overview of how the data moves from the input to the output across the modules of the implementation. This would ease you into reading the source code, which is okay-documented.
 
 You might also find the **[implementation notes](docs/implementation-notes.md)** helpful to clarify how some of the math is implemented.
-
-## To-Do
-
-- **Core:**
-    - Sparse link matrix.
-    - Variable sequence lengths across the same batch.
-- **Tasks**:
-    - ~~bAbI task.~~
-    - Graph inference tasks.
-    - Mini-SHRDLU task.
-- **Utility**:
-    - A task builder that abstracts away all details about iterations, learning rates, ... etc into configurable command-line arguments and leaves the user only with the worries of defining the computational graph.
-
-## Author
-Mostafa Samir
-
-[mostafa.3210@gmail.com](mailto:mostfa.3210@gmail.com)
 
 ## License
 MIT
