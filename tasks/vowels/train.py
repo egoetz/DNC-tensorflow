@@ -15,21 +15,45 @@ from recurrent_controller import RecurrentController
 
 
 def llprint(message):
+    """
+    Flushes message to stdout
+    :param message: A string to print.
+    :return: None.
+    """
     sys.stdout.write(message)
     sys.stdout.flush()
 
 
 def load(path):
+    """
+    Unpickle the file located at path.
+    :param path: The path to the pickled file.
+    :return: Returns the object hierarchy stored in the file.
+    """
     return pickle.load(open(path, 'rb'))
 
 
 def onehot(index, size):
+    """
+    Create a numpy vector that has all zeros except at index. index has the value 1.
+    :param index: The index where the vector should be one.
+    :param size: The length of the vector.
+    :return: A one-hot vector encoding for the given index.
+    """
     vec = np.zeros(size, dtype=np.float32)
     vec[index] = 1.0
     return vec
 
 
 def prepare_sample(sample, target_code, dict_size):
+    """
+    Transform a sequence of letters and the correct response into input and output vectors.
+    :param sample: list of letters forming word.
+    :param target_code: code indicating end of sample and beginning of answer (also used in input as
+                        a replacement for each letter in the answer.
+    :param dict_size: how many total letters exist.
+    :return: tuple including input vector, output vector, length of sequence, and associated weights.
+    """
     input_vec = np.array(sample[0]['inputs'], dtype=np.float32)
     output_vec = np.array(sample[0]['inputs'], dtype=np.float32)
     seq_len = input_vec.shape[0]
@@ -51,8 +75,11 @@ def prepare_sample(sample, target_code, dict_size):
     )
 
 
-if __name__ == '__main__':
-
+def main():
+    """
+    Train the DNC to take a word and list its instances of vowels in order of occurrence.
+    :return: None.
+    """
     dirname = os.path.dirname(__file__)
     ckpts_dir = os.path.join(dirname, 'checkpoints')
     data_dir = os.path.join(dirname, 'data', 'encoded')
@@ -149,7 +176,6 @@ if __name__ == '__main__':
             end = start_step + iterations + 1
 
             start_time_100 = time.time()
-            end_time_100 = None
             avg_100_time = 0.
             avg_counter = 0
 
@@ -203,3 +229,7 @@ if __name__ == '__main__':
                     ncomputer.save(session, ckpts_dir, 'step-%d' % i)
                     llprint("Done!\n")
                     sys.exit(0)
+
+
+if __name__ == '__main__':
+    main()

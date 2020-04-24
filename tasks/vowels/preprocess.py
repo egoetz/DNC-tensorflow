@@ -4,24 +4,24 @@ import getopt
 import numpy as np
 from shutil import rmtree
 from os import listdir, mkdir
-from os.path import join, isfile, isdir, dirname, basename, normpath, abspath, exists
-import random
+from os.path import join, isfile, isdir, dirname, basename, abspath, exists
+
 
 def llprint(message):
+    """
+    Flushes message to stdout
+    :param message: A string to print.
+    :return: None.
+    """
     sys.stdout.write(message)
     sys.stdout.flush()
 
+
 def create_dictionary(files_list):
     """
-    creates a dictionary of unique lexicons in the dataset and their mapping to numbers
-
-    Parameters:
-    ----------
-    files_list: list
-        the list of files to scan through
-
-    Returns: dict
-        the constructed dictionary of lexicons
+    Create a dictionary of unique lexicons in the dataset and their mapping to numbers.
+    :param files_list: the list of files to scan through.
+    :return: the constructed dictionary of lexicons
     """
 
     lexicons_dict = {}
@@ -45,17 +45,10 @@ def create_dictionary(files_list):
 
 def encode_data(files_list, lexicons_dictionary):
     """
-    encodes the dataset into its numeric form given a constructed dictionary
-
-    Parameters:
-    ----------
-    files_list: list
-        the list of files to scan through
-    lexicons_dictionary: dict
-        the mappings of unique lexicons
-
-    Returns: tuple (dict, int)
-        the data in its numeric form, maximum story length
+    Encode the dataset into its numeric form given a constructed dictionary
+    :param files_list: the list of files to scan through.
+    :param lexicons_dictionary: the mappings of unique lexicons.
+    :return: the data in its numeric form, maximum story length
     """
 
     files = {}
@@ -67,18 +60,18 @@ def encode_data(files_list, lexicons_dictionary):
         files[filename] = []
 
         with open(filename, 'r') as fobj:
-            onAnswer = False
+            on_answer = False
             story_inputs = []
             story_outputs = []
             for line in fobj:
                 word = line.strip()
-                if onAnswer:
+                if on_answer:
                     story_outputs.append(lexicons_dictionary[word])
                 else:
                     story_inputs.append(lexicons_dictionary[word])
                     if word == '#':
-                        onAnswer = True
-            story_inputs.extend(lexicons_dictionary['#'] for word in list(range(len(story_outputs))))
+                        on_answer = True
+            story_inputs.extend([lexicons_dictionary['#']] * len(story_outputs))
             files[filename].append({
                 'inputs': story_inputs,
                 'outputs': story_outputs
@@ -91,10 +84,19 @@ def encode_data(files_list, lexicons_dictionary):
 
 
 def generate_data(directory, total_examples):
+    """
+    Create a training (9 /10 of total_examples) and testing (1 / 10 of total_examples) files that each contain a
+     single example of extracting vowels from a word. Each line in a given text files contains one character. Before
+     the '#' character, the lines spell out a word. After the '#' character, the lines repeat the vowels instances in
+     that word in their order of occurrence.
+    :param directory: The directory in which to store training and testing examples
+    :param total_examples: The total number of examples desired
+    :return: None.
+    """
     word_file = "/usr/share/dict/words"
-    WORDS = list(map(str.lower, open(word_file).read().splitlines()))
+    words = list(map(str.lower, open(word_file).read().splitlines()))
     for i in range(0, total_examples):
-        my_inputs = list(WORDS[i])
+        my_inputs = list(words[i])
         if i < np.floor(total_examples * 9 / 10):
             path = join(directory, "%dtrain.txt" %i)
         else:
@@ -108,9 +110,14 @@ def generate_data(directory, total_examples):
                 file.write("%c\n" % letter)
 
 
-if __name__ == '__main__':
+def main():
+    """
+    Generate the data used for training the DNC on how to find vowels in words. Create data directories storing this
+    information in its unencoded form and encoded form.
+    :return: None.
+    """
     task_dir = dirname(abspath(__file__))
-    options,_ = getopt.getopt(sys.argv[1:], '', ['data_dir=', 'single_train'])
+    options, _ = getopt.getopt(sys.argv[1:], '', ['data_dir=', 'single_train'])
     joint_train = True
     files_list = []
     total_examples = 10000
@@ -126,8 +133,8 @@ if __name__ == '__main__':
         if opt[0] == '--single_train':
             joint_train = False
 
-    for entryname in listdir(data_dir):
-        entry_path = join(data_dir, entryname)
+    for entry_name in listdir(data_dir):
+        entry_path = join(data_dir, entry_name)
         if isfile(entry_path) and entry_path.endswith('txt'):
             files_list.append(entry_path)
 
@@ -168,3 +175,7 @@ if __name__ == '__main__':
         pickle.dump(joint_train_data, open(join(train_data_dir, 'train.pkl'), 'wb'))
 
     llprint("Done!\n")
+
+
+if __name__ == '__main__':
+    main()

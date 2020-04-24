@@ -436,8 +436,13 @@ spelling_dict = {
 
 
 def split_up_digits(number):
+    """
+    split up a single number expressed as a string into individual digits.
+    ex. "12" becomes "1 2".
+    :param number: the numerical string to split.
+    :return: the new string.
+    """
     new_str = ""
-    length_num = len(number)
     for char in number:
         if len(new_str) != 0:
             new_str += f" {char}"
@@ -447,6 +452,13 @@ def split_up_digits(number):
 
 
 def replace_word(word_array, dict_of_words_to_replace):
+    """
+    Given an array of words, replace any words matching a key in dict_of_words_to_replace with its corresponding
+    value.
+    :param word_array: The array of words to check.
+    :param dict_of_words_to_replace: The dictionary of words to replace paired with their replacements.
+    :return: The new array of words.
+    """
     new_word_array = []
     for word in word_array:
         if word in dict_of_words_to_replace:
@@ -457,6 +469,12 @@ def replace_word(word_array, dict_of_words_to_replace):
 
 
 def clean_word_array(word_array):
+    """
+    Fix syntax, spelling, and grammar errors in word_array. Note, that this function is only designed to account for
+    errors in the DREAM dataset.
+    :param word_array: An array of words from the DREAM dataset.
+    :return: a new word array with equivalent or improved grammar/spelling/syntax.
+    """
     new_word_array = word_array
     for word in word_array:
         if word in spacing_dict:

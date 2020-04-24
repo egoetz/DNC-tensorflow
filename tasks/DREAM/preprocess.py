@@ -8,17 +8,32 @@ import numpy as np
 import re
 from shutil import rmtree
 from os import listdir, mkdir
-from os.path import join, isfile, isdir, dirname, basename, normpath, abspath, exists
+from os.path import join, isdir, dirname, basename, abspath, exists
 from string import punctuation
 from cleaning import *
 
 
 def llprint(message):
+    """
+    Flushes message to stdout
+    :param message: A string to print.
+    :return: None.
+    """
     sys.stdout.write(message)
     sys.stdout.flush()
 
 
 def clean_sentences(sentence_list):
+    """
+    Cleans sentence_list by: indicating title words by placing a separate word "\^{}" in front of the capitalized word,
+    indicating all-caps word by placing a separate word "\^{}\^{}" in front of the all-caps word, making all words
+    lower case, fixing spelling errors, separating units from numbers, giving all onomatopoeia words the same spelling,
+    separating two words that were missing a space, changing the ending of possessor nouns ending in s, expanding
+    abbreviations, making all number into their own words, changing numbers that were spelled out into digits, making
+    all digits into their own separate words and breaking hyphenated words apart.
+    :param sentence_list: A list of sentences.
+    :return: The modified sentence list.
+    """
     new_sentence_list = []
     for sentence in sentence_list:
         if sentence in sentence_dict.keys():
@@ -92,7 +107,8 @@ def clean_sentences(sentence_list):
         new_sentence = new_sentence.split()
         for i in range(len(new_sentence)):
             if new_sentence[i] in serial_names:
-                new_sentence[i] = ' '.join([f"^ {character}" if character.isalpha() else character for character in new_sentence[i]])
+                new_sentence[i] = ' '.join([f"^ {character}" if character.isalpha() else character for character in
+                                            new_sentence[i]])
         new_sentence = " ".join(new_sentence)
 
         for word in new_sentence.split():
@@ -105,6 +121,34 @@ def clean_sentences(sentence_list):
 
 
 def clean_data(data):
+    """
+    Clean strings contained in hierarchical object with the format:
+    [
+      [
+        [
+          dialogue 1 / turn 1,
+          dialogue 1 / turn 2,
+          ...
+        ],
+        [
+          {
+            "question": dialogue 1 / question 1,
+            "choice": [
+              dialogue 1 / question 1 / answer option 1,
+              dialogue 1 / question 1 / answer option 2,
+              dialogue 1 / question 1 / answer option 3
+            ],
+            "answer": dialogue 1 / question 1 / correct answer option
+          },
+          ...
+        ],
+        dialogue 1 / id
+      ],
+      ...
+    ]
+    :param data: hierarchical object formulated as shown above.
+    :return: data but with its dialogue, question, and answer cleaned.
+    """
     for i, entry in enumerate(data):
         for j in range(len(entry)):
             if j == 0:
@@ -119,15 +163,9 @@ def clean_data(data):
 
 def create_dictionary(data):
     """
-    creates a dictionary of unique lexicons in the dataset and their mapping to numbers
-
-    Parameters:
-    ----------
-    files_list: list
-        the list of files to scan through
-
-    Returns: dict
-        the constructed dictionary of lexicons
+    Create a dictionary of unique lexicons in the dataset and their mapping to numbers.
+    :param data:
+    :return:
     """
 
     lexicons_dict = {}
@@ -158,30 +196,32 @@ def create_dictionary(data):
 
 
 def encode_sentences(sentences, lexicon_dictionary):
+    """
+    Change words in sentences into their one-hot index.
+    :param sentences: A list of sentences where all words are in lexicon_dictionary
+    :param lexicon_dictionary: A dictionary including all the words in the dataset
+           sentences are being drawn from.
+    :return: sentences with each word replaced by a number.
+    """
     new_sentence = []
     for word in sentences.split():
         new_sentence.append(lexicon_dictionary[word])
     return new_sentence
 
 
-def encode_data(files_list, encoded_dir, lexicon_dictionary, length_limit=None):
+def encode_data(files_list, encoded_dir, lexicon_dictionary):
     """
-    encodes the dataset into its numeric form given a constructed dictionary
-
-    Parameters:
-    ----------
-    files_list: list
-        the list of files to scan through
-    lexicons_dictionary: dict
-        the mappings of unique lexicons
-
-    Returns: tuple (dict, int)
-        the data in its numeric form, maximum story length
+    Convert open files in files_list, convert their words into numerical equivalents
+    as defined in lexicon_dictionary, and then store the encoded information in a
+    file of the same name but which is located in encoded_dir.
+    :param files_list: The list of files that should have their information converted
+    :param encoded_dir: The directory to store the new, encoded files in.
+    :param lexicon_dictionary: The dictionary mapping words to numbers (here, numbers
+            represent the high bit index for a one-hot vector encoding).
+    :return: the list of paths containing the encoded information.
     """
     story_inputs = []
     stories_lengths = []
-    #answers_flag = False  # a flag to specify when to put data into outputs list
-    limit = length_limit if length_limit is not None else float("inf")
 
     llprint("Encoding Data ... 0/%d" % (len(files_list)))
     for index, file_path in enumerate(files_list):
@@ -210,6 +250,7 @@ def encode_data(files_list, encoded_dir, lexicon_dictionary, length_limit=None):
 
                         stories_lengths.append(len(full_list))
         story_inputs = []
+        files_list[index] = write_path
 
         llprint("\rEncoding Data ... %d/%d" % (index + 1, len(files_list)))
 
@@ -217,7 +258,15 @@ def encode_data(files_list, encoded_dir, lexicon_dictionary, length_limit=None):
     return files_list, stories_lengths
 
 
-if __name__ == '__main__':
+def main():
+    """
+    Takes json data files in data_dir in the same format as the DREAM dataset and then creates a new directory
+    that contains the same files. But in these files, the dialogue, question and answer's words are cleaned. A second
+    new directory is also created, this directory stores the cleaned data in its numerical format.
+    their numerical equivalent. If single_train is specified, all training and testing dialogues are dumped into the
+    same json file. Otherwise, training and testing data is stored separately.
+    :return:
+    """
     task_dir = dirname(abspath(__file__))
     options, _ = getopt.getopt(sys.argv[1:], '', ['data_dir=', 'single_train', 'length_limit='])
     data_dir = None
@@ -236,6 +285,8 @@ if __name__ == '__main__':
             data_dir = opt[1]
         if opt[0] == '--single_train':
             joint_train = False
+    if not exists(join(task_dir, 'data')):
+        mkdir(join(task_dir, 'data'))
         if opt[0] == '--length_limit':
             length_limit = int(opt[1])
 
@@ -264,17 +315,17 @@ if __name__ == '__main__':
                 all_questions.extend(a_list)
 
     lexicon_dictionary = create_dictionary(all_questions)
-    lexicon_count = len(lexicon_dictionary)
 
     print(f"There are {len(lexicon_dictionary)} unique words; "
           f"{len([entry for entry in lexicon_dictionary if entry.isnumeric()])} of these words are numbers, "
-          f"{len([entry for entry in lexicon_dictionary if entry.isalpha()])} of these words are standard alphabetical words, and "
-          f"{len([entry for entry in lexicon_dictionary if entry in punctuation])} of these words are punctuation marks.")
-    print([entry for entry in lexicon_dictionary if not entry.isnumeric() and not entry.isalpha() and not entry in punctuation
-           ])
+          f"{len([entry for entry in lexicon_dictionary if entry.isalpha()])} of these words are standard alphabetical"
+          f" words, and "
+          f"{len([entry for entry in lexicon_dictionary if entry in punctuation])} of these words are punctuation "
+          f"marks.")
+    print([entry for entry in lexicon_dictionary if not entry.isnumeric() and not entry.isalpha() and entry not in
+           punctuation])
     with open(join(task_dir, 'data', 'dictionary_entries.json'), 'w+') as write_file:
         json.dump(list(lexicon_dictionary.keys()), write_file)
-
 
     processed_data_dir = join(task_dir, 'data', 'encoded')
     train_data_dir = join(processed_data_dir, 'train')
@@ -286,8 +337,9 @@ if __name__ == '__main__':
     mkdir(train_data_dir)
     mkdir(test_data_dir)
 
-    encoded_training_files, training_stories_lengths = encode_data(training_files, train_data_dir, lexicon_dictionary, length_limit)
-    encoded_testing_files, testing_stories_lengths = encode_data(testing_files, test_data_dir, lexicon_dictionary, length_limit)
+    encoded_training_files, training_stories_lengths = encode_data(training_files, train_data_dir, lexicon_dictionary)
+    encoded_testing_files, testing_stories_lengths = encode_data(testing_files, test_data_dir, lexicon_dictionary)
+    encoded_files = encoded_training_files + encoded_testing_files
 
     stories_lengths = np.array(training_stories_lengths + testing_stories_lengths)
     length_limit = np.max(stories_lengths) if length_limit is None else length_limit
@@ -305,16 +357,20 @@ if __name__ == '__main__':
 
     joint_train_data = []
 
-    # for filename in encoded_files:
-    #     if filename.endswith("test.json"):
-    #         pickle.dump(encoded_files[filename], open(join(test_data_dir, basename(filename) + '.pkl'), 'wb'))
-    #     elif filename.endswith("train.json"):
-    #         if not joint_train:
-    #             pickle.dump(encoded_files[filename], open(join(train_data_dir, basename(filename) + '.pkl'), 'wb'))
-    #         else:
-    #             joint_train_data.extend(encoded_files[filename])
-    #
-    # if joint_train:
-    #     pickle.dump(joint_train_data, open(join(train_data_dir, 'train.pkl'), 'wb'))
+    for filename in encoded_files:
+        if filename.endswith("test.json"):
+            pickle.dump(encoded_files[filename], open(join(test_data_dir, basename(filename) + '.pkl'), 'wb'))
+        elif filename.endswith("train.json"):
+            if not joint_train:
+                pickle.dump(encoded_files[filename], open(join(train_data_dir, basename(filename) + '.pkl'), 'wb'))
+            else:
+                joint_train_data.extend(encoded_files[filename])
+
+    if joint_train:
+        pickle.dump(joint_train_data, open(join(train_data_dir, 'train.pkl'), 'wb'))
 
     llprint("Done!\n")
+
+
+if __name__ == '__main__':
+    main()

@@ -18,26 +18,46 @@ from dnc.dnc import DNC
 
 
 def llprint(message):
+    """
+    Flushes message to stdout
+    :param message: A string to print.
+    :return: None.
+    """
     sys.stdout.write(message)
     sys.stdout.flush()
 
 
 def load(path):
+    """
+    Unpickle the file located at path.
+    :param path: The path to the pickled file.
+    :return: Returns the object hierarchy stored in the file.
+    """
     return pickle.load(open(path, 'rb'))
 
 
 def onehot(index, size):
+    """
+    Create a numpy vector that has all zeros except at index. index has the value 1.
+    :param index: The index where the vector should be one.
+    :param size: The length of the vector.
+    :return: A one-hot vector encoding for the given index.
+    """
     vec = np.zeros(size, dtype=np.float32)
     vec[index] = 1.0
     return vec
 
 
-def prepare_sample(sample, target_code, word_space_size, lexicon_dictionary):
-    # input_vec = sample[:sample.index(target_code)]
-    # output_vec = np.array(sample, dtype=np.float32)
-    # while len(input_vec) < len(output_vec):
-    #     input_vec.append(target_code)
-    # input_vec = np.array(input_vec, dtype=np.float32)
+def prepare_sample(sample, target_code, word_space_size):
+    """
+    Transform a sample into input and output vectors.
+    :param sample: the dialogue connected by '+' characters followed by the '\' character and then a question. Where
+                    the question is followed by the target_code and the answer (with all words encoded).
+    :param target_code: code indicating end of sample and beginning of answer (also used in input as
+                        a replacement for each letter in the answer.
+    :param word_space_size: how many total letters exist.
+    :return: tuple including input vector, output vector, length of sequence, and associated weights.
+    """
     input_vec = np.array(sample[:sample.index(target_code)], dtype=np.float32)
     output_vec = sample[sample.index(target_code) + 1:]
     while len(output_vec) < len(input_vec):
@@ -46,11 +66,8 @@ def prepare_sample(sample, target_code, word_space_size, lexicon_dictionary):
     seq_len = input_vec.shape[0]
     weights_vec = np.zeros(seq_len, dtype=np.float32)
 
-    # target_mask = (input_vec == target_code)
     target_mask = (output_vec != target_code)
     weights_vec[target_mask] = 1.0
-    #print("Input vector: ", [list(lexicon_dictionary.keys())[int(num)] for num in input_vec])
-    #print("Output vector: ", [list(lexicon_dictionary.keys())[int(num)] for num in output_vec])
     input_vec = np.array([onehot(int(code), word_space_size) for code in input_vec])
     output_vec = np.array([onehot(int(code), word_space_size) for code in output_vec])
 
@@ -62,11 +79,15 @@ def prepare_sample(sample, target_code, word_space_size, lexicon_dictionary):
     )
 
 
-if __name__ == '__main__':
+def main():
+    """
+    Train the DNC to take answer questions from the DREAM dataset.
+    :return: None.
+    """
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
     tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
     dirname = os.path.dirname(__file__)
-    ckpts_dir = os.path.join(dirname, 'checkpoints/word_count_256')
+    ckpts_dir = os.path.join(dirname, 'checkpoints/')
     data_dir = os.path.join(dirname, 'data', 'encoded')
     tb_logs_dir = os.path.join(dirname, 'logs')
 
@@ -158,7 +179,7 @@ if __name__ == '__main__':
                 llprint("Done!\n")
             elif os.path.exists(ckpts_dir):
                 checkpoints = os.listdir(ckpts_dir)
-                if len(checkpoints) != 0:
+                if len(checkpoints) != 0 and any("step-" in s for s in checkpoints):
                     checkpoint_numbers = [int(checkpoint[checkpoint.find("-") + 1:]) for checkpoint in checkpoints if checkpoint[checkpoint.find("-") + 1:].isnumeric()]
                     checkpoint_numbers.sort()
                     ncomputer.restore(session, ckpts_dir, f"step-{checkpoint_numbers[-1]}")
@@ -167,8 +188,9 @@ if __name__ == '__main__':
 
             last_100_losses = []
 
-            #start = 0 if start_step == 0 else start_step + 1
-            #end = start_step + iterations + 1
+            if not 'start' in locals():
+                start = 0
+                end = 100000
             if from_checkpoint is not None:
                 start = int(from_checkpoint[from_checkpoint.find("-") + 1:])
 
@@ -234,7 +256,7 @@ if __name__ == '__main__':
                         last_100_losses = []
 
                     if take_checkpoint:
-                        llprint("\nSaving Checkpoint ... "),
+                        llprint("\nSaving Checkpoint ... line 237 "),
                         ncomputer.save(session, ckpts_dir, 'step-%d' % i)
                         llprint("Done!\n")
 
@@ -244,3 +266,7 @@ if __name__ == '__main__':
                     ncomputer.save(session, ckpts_dir, 'step-%d' % i)
                     llprint("Done!\n")
                     sys.exit(0)
+
+
+if __name__ == '__main__':
+    main()
